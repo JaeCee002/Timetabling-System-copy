@@ -1,0 +1,14 @@
+.calendar{
+    width: 100%; /* or you can use a fixed width if you prefer */
+    max-width: 1200px; /* limit maximum width */
+    height: 100vh; /* control height: 100% of the screen height */
+    margin-left: 250px; /* center it horizontally */
+    background-color: #fff;
+    padding: 0px, 0px, 0px, 40px;
+    box-sizing: border-box;
+    overflow:hidden;
+    display: flexbox;
+    left: auto;
+    z-index: 0;
+    
+}

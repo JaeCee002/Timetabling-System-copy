@@ -1,0 +1,27 @@
+/* Style the container to use flexbox */
+.Container {
+    
+  flex-direction: row; /* Arrange children side by side */
+  height: 100vh; /* Full viewport height */
+  width: 100%; /* Full width of the viewport */
+  overflow: hidden; /* Prevent overflow */
+  position: relative; /* Ensure child elements can use absolute positioning */
+}
+
+/* Sidebar styling */
+.sidebar {
+  flex: 0 0 300px; /* Sidebar takes 1 part of the available space */
+  max-width: 300px; /* Optional: Set a max width for the sidebar */
+   /* Light background for the sidebar */
+  overflow-y: auto; /* Enable scrolling if content overflows */
+  padding: 10px;
+  box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1); /* Optional: Add a shadow */
+  z-index: 1; /* Ensure the sidebar is above other elements */
+}
+
+/* Calendar styling */
+.MyCalendar {
+  
+    
+  
+}

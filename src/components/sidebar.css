@@ -1,0 +1,124 @@
+.sidebar {
+  width: 200px;
+  color: white;
+  background-color: #2792e4;
+  padding: 20px;
+  height: calc(100vh - 20px); /* Add some space at the bottom */
+  position: fixed;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start; 
+  gap: 20px;
+  top: 10px; 
+  bottom: 10px; 
+  z-index: 1;
+}
+
+.course-list button,
+.class-list button {
+  padding: 10px 20px;
+  color: white;
+  background: #274864;
+  margin-bottom: 5px;
+  cursor: pointer;
+  border-radius: 30px;
+  display: inline-block;
+}
+
+.course-list button:hover,
+.class-list button:hover {
+  color: aquamarine;
+}
+
+.past-btn {
+  width: 100%;
+  padding: 10px;
+  background-color: #262525;
+  color: white;
+  border: none;
+  cursor: pointer;
+  margin-top: auto; /* Push the button to the bottom */
+}
+
+.sidebar h2 {
+  font-size: 18px;
+  margin-bottom: 10px;
+  border-bottom: 2px solid #0e1115;
+  padding-bottom: 5px;
+}
+
+select {
+  width: 100%;
+  padding: 10px;
+  border: 2px solid #85abd7;
+  border-radius: 5px;
+  background-color: #040a0e;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  margin-bottom: 10px;
+}
+
+select:hover,
+select:focus {
+  border-color: #f0f0f0;
+  background-color: #090e16;
+}
+
+select:disabled {
+  background-color: #0b5276;
+  color: #b0b0b0;
+  cursor: not-allowed;
+}
+
+.course-list button,
+.class-list button,
+.past-btn {
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0;
+  border: none;
+  border-radius: 5px;
+  background-color: #276383;
+  color: white;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background 0.3s ease-in-out;
+}
+
+.course-list button:hover,
+.class-list button:hover,
+.past-btn:hover {
+  background-color: #6ca2e0;
+}
+
+.past-btn {
+  width: 100%;
+  padding: 10px;
+  background-color: #82460d;
+  font-weight: bold;
+  border: none;
+  border-radius: 5px;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background 0.3s ease-in-out;
+}
+
+.draggable-course {
+  width: 100%;
+  padding: 10px;
+  margin: 5px 0;
+  border: none;
+  border-radius: 5px;
+  background-color: #1d5b6e;
+  color: white;
+  font-size: 14px;
+  cursor: grab;
+  transition: background 0.3s ease-in-out;
+}
+
+.draggable-course:hover {
+  background-color: #375f8c;
+}
