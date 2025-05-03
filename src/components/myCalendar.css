@@ -12,3 +12,22 @@
     z-index: 0;
     
 }
+
+.calendar-container {
+    display: flex;
+}
+
+.sidebar {
+    width: 200px;
+    padding: 10px;
+    background-color: #2792e4;
+    border-right: 1px solid #ddd;
+}
+
+.fc-event {
+    margin: 10px 0;
+    padding: 5px;
+    background-color: #131d28;
+    color: white;
+    cursor: pointer;
+}
