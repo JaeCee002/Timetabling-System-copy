@@ -1,33 +1,25 @@
-import React from 'react';
+import React, { useState } from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import { DndProvider } from "react-dnd";
-import { HTML5Backend } from "react-dnd-html5-backend";
 import Sidebar from './components/sidebar';
-//import Template from './components/template';
-import FullCalendar from "@fullcalendar/react";
-import dayGridPlugin from  "@fullcalendar/daygrid";
 import MyCalendar from './components/myCalendar';
 import "./App.css";
 
-
-
 function App() {
+  const [events, setEvents] = useState([]); // Shared state for calendar events
 
-  //const onDropCourse = (day, time, course) => {
- //   console.log(`Dropped course: ${course} on ${day} at ${time}`);
- // };
+  // Function to add a new event
+  const addEvent = (event) => {
+    setEvents((prevEvents) => [...prevEvents, event]);
+  };
 
   return (
-    <DndProvider backend={HTML5Backend}>
-      <div className='Container'>
+    <div className='Container' style={{ display: 'flex' }}>
+      {/* Sidebar for draggable events */}
+      <Sidebar />
 
-        <MyCalendar />
-        <Sidebar />
-        {/*<Template onDropCourse={onDropCourse}/>*/}
-        
-
-      </div>
-    </DndProvider>
+      {/* Calendar to drop events */}
+      <MyCalendar events={events} onEventAdd={addEvent} />
+    </div>
   );
 }
 
