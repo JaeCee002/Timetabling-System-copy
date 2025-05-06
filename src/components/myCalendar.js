@@ -33,11 +33,15 @@ function MyCalendar({ events, onEventAdd }) {
         droppable={true} // Enable external event dropping
         events={events} // Use shared events state
         eventReceive={(info) => {
-          // Notify parent component about the new event
+          // Pass raw dropped event to onEventAdd
           onEventAdd({
             title: info.event.title,
-            date: info.event.startStr, // The date the event was dropped on
+            date: info.event.startStr,
+            start: info.event.start,
           });
+
+          // Remove the temp event (it'll be replaced after modal)
+          info.event.remove();
         }}
       />
     </div>

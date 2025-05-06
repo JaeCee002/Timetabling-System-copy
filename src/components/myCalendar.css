@@ -31,3 +31,15 @@
     color: white;
     cursor: pointer;
 }
+.fc-event:hover {
+    background-color: #1a2b3c;
+}
+.fc-event:active {
+    background-color: #1a2b3c;
+    transform: scale(0.95);
+    transition: transform 0.1s ease-in-out;
+}
+.fc-event-title {
+    white-space: pre-wrap;
+  }
+  

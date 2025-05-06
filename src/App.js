@@ -2,91 +2,85 @@ import React, { useState } from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import Sidebar from './components/sidebar';
 import MyCalendar from './components/myCalendar';
-import { Modal, Button, Form } from 'react-bootstrap'; // Import Bootstrap modal
+import { Modal, Button, Form } from 'react-bootstrap';
 import "./App.css";
 
 function App() {
-  const [events, setEvents] = useState([]); // Shared state for calendar events
-  const [showModal, setShowModal] = useState(false); // State to control modal visibility
-  const [selectedEvent, setSelectedEvent] = useState(null); // State to store the event being edited
-  const [availableClasses] = useState(["Classroom A", "Classroom B", "Classroom C"]); // Example classes
-  const [availableLecturers] = useState(["Dr. Smith", "Prof. Johnson", "Ms. Lee"]); // Example lecturers
-  const [selectedClass, setSelectedClass] = useState("");
+  const [events, setEvents] = useState([]);
+  const [showModal, setShowModal] = useState(false);
+  const [currentEvent, setCurrentEvent] = useState(null);
   const [selectedLecturer, setSelectedLecturer] = useState("");
+  const [selectedClassroom, setSelectedClassroom] = useState("");
 
-  // Function to add a new event
-  const addEvent = (event) => {
-    setSelectedEvent(event); // Store the dropped event
-    setShowModal(true); // Show the modal
+  const lecturers = ["Dr. Banda", "Mr. Zulu", "Prof. Phiri", "Ms. Mwansa", "Mr. Chanda", "Dr. Kafwimbi", "Prof. Mbewe", "Ms. Chibale"];
+  const classrooms = ["C 208", "C 301", "C 302", "C 303","C 305","C 306","C 307","C 308"];
+
+  const handleEventAdd = (event) => {
+    setCurrentEvent(event);
+    setShowModal(true);
   };
 
-  // Function to handle modal submission
   const handleModalSubmit = () => {
-    if (selectedEvent) {
-      const updatedEvent = {
-        ...selectedEvent,
-        class: selectedClass,
-        lecturer: selectedLecturer,
-      };
-      setEvents((prevEvents) => [...prevEvents, updatedEvent]); // Update the events list
-    }
-    setShowModal(false); // Close the modal
-    setSelectedClass(""); // Reset the selected class
-    setSelectedLecturer(""); // Reset the selected lecturer
+    const updatedEvent = {
+      ...currentEvent,
+      title: `${currentEvent.title}\n(${selectedLecturer}, ${selectedClassroom})`,
+    };
+    setEvents(prev => [...prev, updatedEvent]);
+
+    // Reset
+    setSelectedLecturer("");
+    setSelectedClassroom("");
+    setShowModal(false);
   };
 
   return (
     <div className='Container' style={{ display: 'flex' }}>
-      {/* Sidebar for draggable events */}
       <Sidebar />
+      <MyCalendar events={events} onEventAdd={handleEventAdd} />
 
-      {/* Calendar to drop events */}
-      <MyCalendar events={events} onEventAdd={addEvent} />
-
-      {/* Modal for selecting class and lecturer */}
-      <Modal show={showModal} onHide={() => setShowModal(false)}>
+      {/* Modal for assigning lecturer and class */}
+      <Modal show={showModal} onHide={() => setShowModal(false)} centered>
         <Modal.Header closeButton>
-          <Modal.Title>Assign Class and Lecturer</Modal.Title>
+          <Modal.Title>Assign Lecturer and Classroom</Modal.Title>
         </Modal.Header>
         <Modal.Body>
           <Form>
-            <Form.Group controlId="formClass">
-              <Form.Label>Select Classroom</Form.Label>
-              <Form.Control
-                as="select"
-                value={selectedClass}
-                onChange={(e) => setSelectedClass(e.target.value)}
-              >
-                <option value="">-- Select a Classroom --</option>
-                {availableClasses.map((cls, index) => (
-                  <option key={index} value={cls}>
-                    {cls}
-                  </option>
-                ))}
-              </Form.Control>
-            </Form.Group>
-            <Form.Group controlId="formLecturer" className="mt-3">
+            <Form.Group controlId="formLecturer">
               <Form.Label>Select Lecturer</Form.Label>
               <Form.Control
                 as="select"
                 value={selectedLecturer}
                 onChange={(e) => setSelectedLecturer(e.target.value)}
               >
-                <option value="">-- Select a Lecturer --</option>
-                {availableLecturers.map((lecturer, index) => (
-                  <option key={index} value={lecturer}>
-                    {lecturer}
-                  </option>
+                <option value="">Choose...</option>
+                {lecturers.map((lec, i) => (
+                  <option key={i} value={lec}>{lec}</option>
+                ))}
+              </Form.Control>
+            </Form.Group>
+
+            <Form.Group controlId="formClassroom" className="mt-3">
+              <Form.Label>Select Classroom</Form.Label>
+              <Form.Control
+                as="select"
+                value={selectedClassroom}
+                onChange={(e) => setSelectedClassroom(e.target.value)}
+              >
+                <option value="">Choose...</option>
+                {classrooms.map((room, i) => (
+                  <option key={i} value={room}>{room}</option>
                 ))}
               </Form.Control>
             </Form.Group>
           </Form>
         </Modal.Body>
         <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowModal(false)}>
-            Cancel
-          </Button>
-          <Button variant="primary" onClick={handleModalSubmit}>
+          <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
+          <Button
+            variant="primary"
+            onClick={handleModalSubmit}
+            disabled={!selectedLecturer || !selectedClassroom}
+          >
             Assign
           </Button>
         </Modal.Footer>
