@@ -39,52 +39,57 @@ function App() {
       <MyCalendar events={events} onEventAdd={handleEventAdd} />
 
       {/* Modal for assigning lecturer and class */}
-      <Modal show={showModal} onHide={() => setShowModal(false)} centered>
-        <Modal.Header closeButton>
-          <Modal.Title>Assign Lecturer and Classroom</Modal.Title>
-        </Modal.Header>
-        <Modal.Body>
-          <Form>
-            <Form.Group controlId="formLecturer">
-              <Form.Label>Select Lecturer</Form.Label>
-              <Form.Control
-                as="select"
-                value={selectedLecturer}
-                onChange={(e) => setSelectedLecturer(e.target.value)}
-              >
-                <option value="">Choose...</option>
-                {lecturers.map((lec, i) => (
-                  <option key={i} value={lec}>{lec}</option>
-                ))}
-              </Form.Control>
-            </Form.Group>
-
-            <Form.Group controlId="formClassroom" className="mt-3">
-              <Form.Label>Select Classroom</Form.Label>
-              <Form.Control
-                as="select"
-                value={selectedClassroom}
-                onChange={(e) => setSelectedClassroom(e.target.value)}
-              >
-                <option value="">Choose...</option>
-                {classrooms.map((room, i) => (
-                  <option key={i} value={room}>{room}</option>
-                ))}
-              </Form.Control>
-            </Form.Group>
-          </Form>
-        </Modal.Body>
-        <Modal.Footer>
-          <Button variant="secondary" onClick={() => setShowModal(false)}>Cancel</Button>
-          <Button
-            variant="primary"
-            onClick={handleModalSubmit}
-            disabled={!selectedLecturer || !selectedClassroom}
+      <Modal show={showModal} onHide={() => setShowModal(false)} centered dialogClassName="dark-modal">
+  <Modal.Header closeButton className="bg-dark text-white border-0">
+    <Modal.Title>Assign Details</Modal.Title>
+  </Modal.Header>
+  <Modal.Body className="bg-dark text-white">
+    <div className="hover-select-container">
+      <div className="hover-label">Lecturer</div>
+      <div className="hover-select">
+        {lecturers.map((lec, i) => (
+          <div
+            key={i}
+            className={`dropdown-item text-white ${lec === selectedLecturer ? 'active' : ''}`}
+            onClick={() => setSelectedLecturer(lec)}
           >
-            Assign
-          </Button>
-        </Modal.Footer>
-      </Modal>
+            {lec}
+          </div>
+        ))}
+      </div>
+      <div className="selected-option">{selectedLecturer || "Hover to select"}</div>
+    </div>
+
+    <div className="hover-select-container mt-4">
+      <div className="hover-label">Classroom</div>
+      <div className="hover-select">
+        {classrooms.map((room, i) => (
+          <div
+            key={i}
+            className={`dropdown-item text-white ${room === selectedClassroom ? 'active' : ''}`}
+            onClick={() => setSelectedClassroom(room)}
+          >
+            {room}
+          </div>
+        ))}
+      </div>
+      <div className="selected-option">{selectedClassroom || "Hover to select"}</div>
+    </div>
+  </Modal.Body>
+  <Modal.Footer className="bg-dark border-0">
+    <Button variant="secondary" onClick={() => setShowModal(false)}>
+      Cancel
+    </Button>
+    <Button
+      variant="primary"
+      onClick={handleModalSubmit}
+      disabled={!selectedLecturer || !selectedClassroom}
+    >
+      Assign
+    </Button>
+  </Modal.Footer>
+</Modal>
+
     </div>
   );
 }

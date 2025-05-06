@@ -27,15 +27,15 @@
 .fc-event {
     margin: 10px 0;
     padding: 5px;
-    background-color: #131d28;
+    background-color: #1e3e60;
     color: white;
     cursor: pointer;
 }
 .fc-event:hover {
-    background-color: #1a2b3c;
+    background-color: #c0c9c3;
 }
 .fc-event:active {
-    background-color: #1a2b3c;
+    background-color: #c7c9c8;
     transform: scale(0.95);
     transition: transform 0.1s ease-in-out;
 }

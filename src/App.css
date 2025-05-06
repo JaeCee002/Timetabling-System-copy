@@ -25,3 +25,54 @@
     
   
 }
+.dark-modal .modal-content {
+  background-color: #111;
+  color: white;
+  border: none;
+  border-radius: 10px;
+}
+
+.hover-select-container {
+  position: relative;
+  margin-bottom: 20px;
+}
+
+.hover-label {
+  font-weight: bold;
+  margin-bottom: 6px;
+}
+
+.hover-select {
+  position: absolute;
+  top: 0;
+  left: 100%;
+  background-color: #222;
+  border: 1px solid #444;
+  padding: 10px;
+  z-index: 1000;
+  display: none;
+  min-width: 150px;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.6);
+}
+
+.hover-select-container:hover .hover-select {
+  display: block;
+}
+
+.hover-select .dropdown-item {
+  cursor: pointer;
+  padding: 5px 10px;
+  transition: background 0.2s ease-in-out;
+}
+
+.hover-select .dropdown-item:hover,
+.hover-select .dropdown-item.active {
+  background-color: #007bff;
+  color: white;
+}
+
+.selected-option {
+  margin-top: 30px;
+  padding-left: 4px;
+  font-style: italic;
+}
