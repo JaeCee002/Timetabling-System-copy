@@ -1,17 +1,12 @@
 .sidebar {
   width: 200px;
   color: white;
-  background-color: #2792e4;
   padding: 20px;
-  height: calc(100vh - 20px); /* Add some space at the bottom */
+  height: 100vh; /* calc(100vh - 20px) Add some space at the bottom */
   position: fixed;
-  overflow-y: auto;
+  overflow-y: hidden;
   display: flex;
   flex-direction: column;
-  justify-content: flex-start; 
-  gap: 20px;
-  top: 10px; 
-  bottom: 10px; 
   z-index: 1;
 }
 
@@ -90,7 +85,7 @@ select:disabled {
 .course-list button:hover,
 .class-list button:hover,
 .past-btn:hover {
-  background-color: #6ca2e0;
+  background-color: #6cb1e0;
 }
 
 .past-btn {
@@ -120,5 +115,5 @@ select:disabled {
 }
 
 .draggable-course:hover {
-  background-color: #375f8c;
+  background-color: #1c74af;
 }

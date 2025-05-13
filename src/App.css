@@ -1,15 +1,17 @@
 /* Style the container to use flexbox */
 .Container {
-    
+  background-color: #d8d5d5;
   flex-direction: row; /* Arrange children side by side */
   height: 100vh; /* Full viewport height */
+  max-height: ;
   width: 100%; /* Full width of the viewport */
-  overflow: hidden; /* Prevent overflow */
+  overflow: auto; /* Prevent overflow */
   position: relative; /* Ensure child elements can use absolute positioning */
 }
 
 /* Sidebar styling */
 .sidebar {
+  background-color: #212529;
   flex: 0 0 300px; /* Sidebar takes 1 part of the available space */
   max-width: 300px; /* Optional: Set a max width for the sidebar */
    /* Light background for the sidebar */
@@ -21,8 +23,7 @@
 
 /* Calendar styling */
 .MyCalendar {
-  
-    
+   
   
 }
 .dark-modal .modal-content {

@@ -43,3 +43,16 @@
     white-space: pre-wrap;
   }
   
+  /* Make events fill the full cell */
+.fc-event {
+    margin: 0 !important;
+    border-radius: 0 !important;
+    padding: 2px 4px !important;
+    border: solid #212529;
+  }
+  
+  /* Optional: remove extra space inside the event */
+  .fc-event-main {
+    padding: 0 !important;
+  }
+  
