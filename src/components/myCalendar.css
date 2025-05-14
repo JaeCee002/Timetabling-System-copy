@@ -1,6 +1,10 @@
+.added-courses{
+    margin-top: 2rem;
+  }
+
 .calendar{
     width: 100%; /* or you can use a fixed width if you prefer */
-    max-width: 1200px; /* limit maximum width */
+    max-width: 800px; /* limit maximum width */
     height: 100vh; /* control height: 100% of the screen height */
     margin-left: 250px; /* center it horizontally */
     background-color: #fff;
@@ -55,4 +59,21 @@
   .fc-event-main {
     padding: 0 !important;
   }
+  /*TRASH CAN*/
+  .delete-zone{
+    margin-top: 0rem;
+    padding: 1rem;
+    width: 100px;
+    margin-left: auto;
+    margin-right: 3%;
+    border-radius: 50%;
+    text-align: center;
+    transition: transform 0.3s, background-color 0.3s;
+}
+.delete-zone.hovered {
+  color: rgb(204, 4, 4);
+  transform: scale(1.1);      /* Slight zoom */
+  cursor: grab;
+}
+  
   

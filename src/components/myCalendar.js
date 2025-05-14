@@ -5,9 +5,10 @@ import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin, { Draggable } from "@fullcalendar/interaction";
 import bootstrap5Plugin from '@fullcalendar/bootstrap5'; // bootstrap5 version
 import 'bootstrap/dist/css/bootstrap.min.css';
+import {Trash} from 'react-bootstrap-icons';
 import "./myCalendar.css";
 
-function MyCalendar({ events, onEventAdd }) {
+function MyCalendar({ events, onEventAdd, onEventDelete}) {
   const calendarRef = useRef(null);
 
   useEffect(() => {
@@ -33,6 +34,10 @@ function MyCalendar({ events, onEventAdd }) {
         </div>
     
     <div className="card-body">
+      <div className="added-courses">
+
+
+      </div>
     
       <FullCalendar
         plugins={[dayGridPlugin, interactionPlugin, timeGridPlugin, bootstrap5Plugin]}
@@ -54,8 +59,37 @@ function MyCalendar({ events, onEventAdd }) {
           // month: 'short',
           // day: 'numeric'
         }}
+         eventDragStart = {(info)=>{
+            const trash = document.getElementById("delete-zone");
+            trash.classList.add("hovered");
+         }}
+         eventDragStop={(info) => {
+            const trash = document.getElementById("delete-zone");
+            trash.classList.remove("hovered");
+
+            const rect = trash.getBoundingClientRect();
+            const { clientX: x, clientY: y } = info.jsEvent;
+
+            const inTrash =
+              x >= rect.left &&
+              x <= rect.right &&
+              y >= rect.top &&
+              y <= rect.bottom;
+
+            if (inTrash) {
+              if (window.confirm(`Delete event "${info.event.title}"?`)) {
+                info.event.remove();// remove from fc ui
+
+                //remove from state
+                if(onEventDelete){
+                onEventDelete(info.event.id);
+               }}}}}
+
+         height={450}
          slotMinTime = "06:00:00"
          slotMaxTime = "21:00:00"
+         slotDuration = "00:30:00"
+         expandRows= {false}
         events={events} // Use shared events state
         eventReceive={(info) => {
           // Pass raw dropped event to onEventAdd
@@ -70,6 +104,7 @@ function MyCalendar({ events, onEventAdd }) {
           
             // Add new event with fixed 2-hour duration
             onEventAdd({
+              id: String(Date.now()),
               title: info.event.title,
               date : info.event.startStr,
               start: info.event.start,
@@ -82,8 +117,14 @@ function MyCalendar({ events, onEventAdd }) {
         }}
       />
     </div>
+    <div id="delete-zone"
+          className="delete-zone"
+    >
+      <Trash size={28}/>
+    </div>
   </div>
  </div>
+ 
   );
 }
 

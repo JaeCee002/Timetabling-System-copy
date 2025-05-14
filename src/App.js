@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import Sidebar from './components/sidebar';
 import MyCalendar from './components/myCalendar';
-import { Modal, Button, Form } from 'react-bootstrap';
+import { Modal, Button} from 'react-bootstrap';
 import "./App.css";
 
 function App() {
@@ -18,6 +18,10 @@ function App() {
   const handleEventAdd = (event) => {
     setCurrentEvent(event);
     setShowModal(true);
+  };
+  
+  const handleEventDelete = (eventId) => {
+    setEvents((prev) => prev.filter((e) => e.id !== eventId));
   };
 
   const handleModalSubmit = () => {
@@ -36,7 +40,7 @@ function App() {
   return (
     <div className='Container' style={{ display: 'flex' }}>
       <Sidebar />
-      <MyCalendar events={events} onEventAdd={handleEventAdd} />
+      <MyCalendar events={events} onEventAdd={handleEventAdd} onEventDelete={handleEventDelete} />
 
       {/* Modal for assigning lecturer and class */}
       <Modal show={showModal} onHide={() => setShowModal(false)} centered dialogClassName="dark-modal" size="sm">
