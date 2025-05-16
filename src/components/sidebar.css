@@ -12,18 +12,59 @@
 
 .course-list button,
 .class-list button {
-  padding: 10px 20px;
-  color: white;
-  background: #274864;
-  margin-bottom: 5px;
+  width: 100%;
+  padding: 9px 0;
+  margin: 6px 0;
+  border: none;
+  border-radius: 7px;
+  background: #2196f3;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.92rem;
+  box-shadow: 0 4px 16px rgba(33,150,243,0.18), 0 1.5px 4px rgba(0,0,0,0.12);
+  letter-spacing: 0.3px;
+  transition: box-shadow 0.2s, transform 0.2s, background 0.2s;
   cursor: pointer;
-  border-radius: 30px;
-  display: inline-block;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
 }
 
 .course-list button:hover,
 .class-list button:hover {
-  color: aquamarine;
+  background: #1769aa;
+  box-shadow: 0 8px 24px rgba(33,150,243,0.28), 0 2px 8px rgba(0,0,0,0.16);
+  transform: translateY(-2px) scale(1.03);
+  color: #fff;
+}
+
+.course-list .course-btn {
+  width: 100%;
+  padding: 9px 0;
+  margin: 20px 0;
+  border: none;
+  border-radius: 8px;
+  background: #023e6f;
+  color: #fff;
+  font-weight: bold;
+  font-size: 0.92rem;
+  box-shadow: 0 4px 16px rgba(175, 184, 191, 0.18), 0 1.5px 4px rgba(0,0,0,0.12);
+  letter-spacing: 0.3px;
+  transition: box-shadow 0.2s, transform 0.2s, background 0.2s;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+}
+
+.course-list .course-btn:hover,
+.course-list .course-btn:focus {
+  background: #1065ab;
+  box-shadow: 0 8px 24px rgba(166, 200, 229, 0.28), 0 2px 8px rgba(19, 17, 17, 0.16);
+  transform: translateY(-2px) scale(1.03);
+  color: #fff;
 }
 
 .past-btn {
@@ -67,38 +108,18 @@ select:disabled {
   cursor: not-allowed;
 }
 
-.course-list button,
-.class-list button,
 .past-btn {
   width: 100%;
-  padding: 10px;
-  margin: 5px 0;
-  border: none;
-  border-radius: 5px;
-  background-color: #276383;
-  color: white;
-  font-size: 14px;
-  cursor: pointer;
-  transition: background 0.3s ease-in-out;
-}
-
-.course-list button:hover,
-.class-list button:hover,
-.past-btn:hover {
-  background-color: #6cb1e0;
-}
-
-.past-btn {
-  width: 100%;
-  padding: 10px;
+  padding: 8px 0; /* slightly reduced padding */
   background-color: #82460d;
   font-weight: bold;
   border: none;
   border-radius: 5px;
   color: white;
-  font-size: 16px;
+  font-size: 13px; /* slightly reduced size */
   cursor: pointer;
   transition: background 0.3s ease-in-out;
+  box-shadow: 0 2px 6px rgba(33,150,243,0.10), 0 1px 2px rgba(0,0,0,0.10); /* subtle elevation */
 }
 
 .draggable-course {
@@ -116,4 +137,61 @@ select:disabled {
 
 .draggable-course:hover {
   background-color: #1c74af;
+}
+
+.admin-dashboard-btn {
+  margin-top: 2rem;
+  width: 100%;
+  background: #0d406a;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  padding: 14px 0;
+  font-weight: bold;
+  font-size: 1rem;
+  box-shadow: 0 4px 16px rgba(33,150,243,0.18), 0 1.5px 4px rgba(0,0,0,0.12);
+  letter-spacing: 0.5px;
+  transition: box-shadow 0.2s, transform 0.2s, background 0.2s;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.admin-dashboard-btn:hover,
+.admin-dashboard-btn:focus {
+  background: #1769aa;
+  box-shadow: 0 8px 24px rgba(33,150,243,0.28), 0 2px 8px rgba(0,0,0,0.16);
+  transform: translateY(-2px) scale(1.03);
+  outline: none;
+}
+
+.admin-dashboard-icon {
+  font-size: 1.3em;
+  margin-right: 8px;
+  display: inline-block;
+}
+
+.course-btn-wrapper {
+  width: 100%;
+  position: relative;
+}
+
+.drag-tip {
+  position: absolute;
+  top: -32px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #0b1014;
+  color: #fff;
+  padding: 5px 14px;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  box-shadow: 0 2px 8px rgba(33,150,243,0.18);
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0.97;
+  transition: opacity 0.2s;
 }

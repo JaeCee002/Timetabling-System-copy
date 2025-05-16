@@ -2,12 +2,32 @@
 
 import React, { useState, useEffect, useRef } from "react";
 import { Draggable } from "@fullcalendar/interaction";
+import { useNavigate } from "react-router-dom";
 import "./sidebar.css";
 
 const CourseButton = ({ course }) => {
+  const [showTip, setShowTip] = useState(false);
+
   return (
-    <div className="fc-event" data-event-title={course}>
-      {course}
+    <div
+      className="course-btn-wrapper"
+      onMouseEnter={() => setShowTip(true)}
+      onMouseLeave={() => setShowTip(false)}
+      style={{ position: "relative", width: "100%" }}
+    >
+      {showTip && (
+        <div className="drag-tip">
+          Drag this course to the calendar
+        </div>
+      )}
+      <button
+        className="fc-event course-btn"
+        data-event-title={course}
+        type="button"
+        tabIndex={0}
+      >
+        {course}
+      </button>
     </div>
   );
 };
@@ -19,6 +39,7 @@ const Sidebar = () => {
   const [year, setYear] = useState("");
 
   const sidebarRef = useRef(null);
+  const navigate = useNavigate();
 
   const schoolPrograms = {
     ict: ["Computer Science", "Information Systems", "Bio-Informatics"],
@@ -95,6 +116,13 @@ const Sidebar = () => {
           <CourseButton key={course} course={course} />
         ))}
       </div>
+      <button
+        className="admin-dashboard-btn"
+        style={{ marginTop: "2rem", width: "100%" }}
+        onClick={() => navigate("/dash")}
+      >
+        Admin Dashboard
+      </button>
     </div>
   );
 };
