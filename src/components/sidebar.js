@@ -124,7 +124,7 @@ const Sidebar = () => {
         Admin Dashboard
       </button>
     </div>
-  );
+  ); 
 };
 
 export default Sidebar;
