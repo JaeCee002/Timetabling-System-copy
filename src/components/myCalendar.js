@@ -3,28 +3,29 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
 import interactionPlugin, { Draggable } from "@fullcalendar/interaction";
-import bootstrap5Plugin from '@fullcalendar/bootstrap5'; // bootstrap5 version
+import bootstrap5Plugin from '@fullcalendar/bootstrap5';
 import 'bootstrap/dist/css/bootstrap.min.css';
-import {Trash} from 'react-bootstrap-icons';
+import { Trash } from 'react-bootstrap-icons';
+import { Modal, Button } from "react-bootstrap";
 import "./myCalendar.css";
 
-function MyCalendar({ events, onEventAdd, onEventDelete }) {
+function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit }) {
   const calendarRef = useRef(null);
   const [alert, setAlert] = useState({ show: false, message: "", x: 0, y: 0 });
+  const [selectedEvent, setSelectedEvent] = useState(null);
+  const [showEventModal, setShowEventModal] = useState(false);
+  const [editMode, setEditMode] = useState(false);
+  const [editLecturer, setEditLecturer] = useState("");
+  const [editClassroom, setEditClassroom] = useState("");
 
-  useEffect(() => {
-    let calendarEl = calendarRef.current;
-    if (calendarEl) {
-      new Draggable(calendarEl, {
-        itemSelector: ".fc-event",
-        eventData: function (eventEl) {
-          return {
-            title: eventEl.innerText,
-          };
-        },
-      });
-    }
-  }, []);
+  const lecturers = [
+    "Dr. Banda", "Mr. Zulu", "Prof. Phiri", "Ms. Mwansa",
+    "Mr. Chanda", "Dr. Kafwimbi", "Prof. Mbewe", "Ms. Chibale"
+  ];
+  const classrooms = [
+    "C 208", "C 301", "C 302", "C 303",
+    "C 305", "C 306", "C 307", "C 308"
+  ];
 
   // Hide alert after 2 seconds
   useEffect(() => {
@@ -36,7 +37,6 @@ function MyCalendar({ events, onEventAdd, onEventDelete }) {
 
   // Helper to show alert above event
   const showAlertAboveEvent = (info, message) => {
-    // Try to get event element's position
     const eventEl = info.el;
     if (eventEl) {
       const rect = eventEl.getBoundingClientRect();
@@ -44,7 +44,7 @@ function MyCalendar({ events, onEventAdd, onEventDelete }) {
         show: true,
         message,
         x: rect.left + window.scrollX,
-        y: rect.top + window.scrollY - 40 // 40px above event
+        y: rect.top + window.scrollY - 40
       });
     } else {
       setAlert({
@@ -53,6 +53,37 @@ function MyCalendar({ events, onEventAdd, onEventDelete }) {
         x: window.innerWidth / 2 - 100,
         y: 100
       });
+    }
+  };
+
+  // Handle event click
+  const handleEventClick = (info) => {
+    setSelectedEvent(info.event);
+    setEditLecturer(info.event.extendedProps?.lecturer || "");
+    setEditClassroom(info.event.extendedProps?.classroom || "");
+    setShowEventModal(true);
+    setEditMode(false);
+  };
+
+  // Handle delete
+  const handleDelete = () => {
+    if (selectedEvent) {
+      selectedEvent.remove();
+      if (onEventDelete) onEventDelete(selectedEvent.id);
+      setShowEventModal(false);
+    }
+  };
+
+  // Handle edit save
+  const handleEditSave = () => {
+    if (selectedEvent) {
+      selectedEvent.setProp(
+        "title",
+        `${selectedEvent.title.split('\n')[0]}\n(${editLecturer}, ${editClassroom})`
+      );
+      selectedEvent.setExtendedProp("lecturer", editLecturer);
+      selectedEvent.setExtendedProp("classroom", editClassroom);
+      setShowEventModal(false);
     }
   };
 
@@ -83,6 +114,84 @@ function MyCalendar({ events, onEventAdd, onEventDelete }) {
         </div>
       )}
 
+      {/* Event Modal */}
+      <Modal show={showEventModal} onHide={() => setShowEventModal(false)} centered>
+        <Modal.Header closeButton>
+          <Modal.Title>
+            {editMode ? "Edit Event" : "Event Options"}
+          </Modal.Title>
+        </Modal.Header>
+        <Modal.Body>
+          {!editMode ? (
+            <>
+              <div>
+                <strong>Title:</strong> {selectedEvent?.title.split('\n')[0]}
+              </div>
+              <div>
+                <strong>Lecturer:</strong> {selectedEvent?.extendedProps?.lecturer || "Not set"}
+              </div>
+              <div>
+                <strong>Classroom:</strong> {selectedEvent?.extendedProps?.classroom || "Not set"}
+              </div>
+            </>
+          ) : (
+            <>
+              <div className="mb-3">
+                <label className="form-label">Lecturer</label>
+                <select
+                  className="form-select"
+                  value={editLecturer}
+                  onChange={e => setEditLecturer(e.target.value)}
+                >
+                  <option value="">Select Lecturer</option>
+                  {lecturers.map((lec, i) => (
+                    <option key={i} value={lec}>{lec}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="mb-3">
+                <label className="form-label">Classroom</label>
+                <select
+                  className="form-select"
+                  value={editClassroom}
+                  onChange={e => setEditClassroom(e.target.value)}
+                >
+                  <option value="">Select Classroom</option>
+                  {classrooms.map((room, i) => (
+                    <option key={i} value={room}>{room}</option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+        </Modal.Body>
+        <Modal.Footer>
+          {!editMode ? (
+            <>
+              <Button variant="danger" onClick={handleDelete}>
+                Delete
+              </Button>
+              <Button variant="primary" onClick={() => setEditMode(true)}>
+                Edit
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button variant="secondary" onClick={() => setEditMode(false)}>
+                Cancel
+              </Button>
+              <Button
+                variant="success"
+                onClick={handleEditSave}
+                disabled={!editLecturer || !editClassroom}
+              >
+                Save
+              </Button>
+            </>
+          )}
+        </Modal.Footer>
+      </Modal>
+
       <div className="card shadow-sm">
         <div className="card-header bg-dark text-white">
           TIMETABLING SYSTEM
@@ -90,6 +199,7 @@ function MyCalendar({ events, onEventAdd, onEventDelete }) {
         <div className="card-body">
           <div className="added-courses"></div>
           <FullCalendar
+            ref={calendarRef}
             plugins={[dayGridPlugin, interactionPlugin, timeGridPlugin, bootstrap5Plugin]}
             themeSystem="bootstrap5"
             initialView="timeGridWeek"
@@ -107,6 +217,7 @@ function MyCalendar({ events, onEventAdd, onEventDelete }) {
             dayHeaderFormat={{
               weekday: 'short'
             }}
+            eventClick={handleEventClick}
             eventDragStart={(info) => {
               const trash = document.getElementById("delete-zone");
               trash.classList.add("hovered");

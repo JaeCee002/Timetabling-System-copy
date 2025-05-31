@@ -75,5 +75,17 @@
   transform: scale(1.1);      /* Slight zoom */
   cursor: grab;
 }
-  
-  
+.form-select {
+  background-color: #1a1b1c !important;
+  color: #ffffff !important;
+  border: 1.5px solid #2563eb !important;
+  border-radius: 6px !important;
+  font-weight: 500;
+  transition: border-color 0.2s;
+}
+
+.form-select:focus {
+  border-color: #0ea5e9 !important;
+  box-shadow: 0 0 0 2px #2563eb33 !important;
+  background-color: #09090a !important;
+}
