@@ -72,20 +72,57 @@
 }
 .delete-zone.hovered {
   color: rgb(204, 4, 4);
-  transform: scale(1.1);      /* Slight zoom */
+  transform: scale(1.1);      
   cursor: grab;
 }
 .form-select {
-  background-color: #1a1b1c !important;
-  color: #ffffff !important;
+  background-color: #080909 !important;
+  color: #fbfcfc !important;
   border: 1.5px solid #2563eb !important;
   border-radius: 6px !important;
   font-weight: 500;
   transition: border-color 0.2s;
+  font-size: 0.95rem;
+  max-height: 8.8rem; /* 4 items * ~2.2rem each */
+  min-height: 2.2rem;
+  overflow-y: auto;
+  width: 150px !important; /* Make dropdown even smaller */
+  padding: 4px 8px !important;
+}
+
+.form-select option {
+  padding: 6px 10px;
+}
+
+/* Optional: style the scrollbar for a more professional look */
+.form-select {
+  scrollbar-width: thin;
+  scrollbar-color: #2563eb #f4f7fa;
 }
 
 .form-select:focus {
-  border-color: #0ea5e9 !important;
+  border-color: #00aeff !important;
   box-shadow: 0 0 0 2px #2563eb33 !important;
   background-color: #09090a !important;
+}
+
+/* Make the modal popup smaller */
+.modal-dialog {
+  max-width: 340px !important;
+}
+
+.modal-content {
+  background-color: #080909;
+  color: #fbfcfc;
+  padding: 10px 12px !important;
+  font-size: 0.97rem !important;
+}
+
+.modal-header,
+.modal-footer {
+  padding: 8px 12px !important;
+}
+
+.modal-title {
+  font-size: 1.1rem !important;
 }

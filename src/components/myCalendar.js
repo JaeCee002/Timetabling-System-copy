@@ -292,9 +292,6 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit }) {
             }}
           />
         </div>
-        <div id="delete-zone" className="delete-zone">
-          <Trash size={28} />
-        </div>
       </div>
     </div>
   );

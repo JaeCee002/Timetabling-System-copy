@@ -3,7 +3,7 @@
   background-color: #d8d5d5;
   flex-direction: row; /* Arrange children side by side */
   height: 100vh; /* Full viewport height */
-  max-height: ;
+  max-height:fit-content;
   width: 100%; /* Full width of the viewport */
   overflow: auto; /* Prevent overflow */
   position: relative; /* Ensure child elements can use absolute positioning */
