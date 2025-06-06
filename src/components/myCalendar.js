@@ -9,7 +9,7 @@ import { Modal, Button } from "react-bootstrap";
 import "./myCalendar.css";
 
 function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit }) {
-  const calendarRef = useRef(null);
+  const calendarRef = useRef();
   const [alert, setAlert] = useState({ show: false, message: "", x: 0, y: 0 });
   const [selectedEvent, setSelectedEvent] = useState(null);
   const [showEventModal, setShowEventModal] = useState(false);
@@ -90,7 +90,7 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit }) {
     <div className="container ms-10" style={{ marginLeft: '13rem', position: "relative" }}>
       {/* Alert Popup */}
       {alert.show && (
-        <div
+        <div className="delete-zone"
           style={{
             position: "absolute",
             left: alert.x,
@@ -105,13 +105,38 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit }) {
             boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
             display: "flex",
             alignItems: "center",
-            minWidth: "220px"
+            minWidth: "220px",
           }}
-        >
+        > 
           <span style={{ fontSize: "1.5rem", marginRight: "10px", color: "#b91c1c" }}>✖</span>
           {alert.message}
         </div>
       )}
+      {/* Delete Zone
+        Delete Zone
+<div
+  id="delete-zone"
+  style={{
+    position: "fixed",
+    bottom: "20px",
+    right: "20px",
+    width: "100px",
+    height: "100px",
+    backgroundColor: "#ffdddd",
+    border: "2px dashed #ff0000",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    borderRadius: "10px",
+    fontSize: "50px",
+    fontWeight: "bold",
+    color: "#ff0000",
+    zIndex: 2000
+  }}
+>
+  <i className="bi bi-trash"></i>
+</div> */}
+
 
       {/* Event Modal */}
       <Modal show={showEventModal} onHide={() => setShowEventModal(false)} centered>
@@ -197,7 +222,8 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit }) {
         </div>
         <div className="card-body">
           <div className="added-courses"></div>
-          <FullCalendar
+
+<FullCalendar
             ref={calendarRef}
             plugins={[dayGridPlugin, interactionPlugin, timeGridPlugin, bootstrap5Plugin]}
             themeSystem="bootstrap5"
@@ -218,31 +244,37 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit }) {
             }}
             eventClick={handleEventClick}
             eventDragStart={(info) => {
-              const trash = document.getElementById("delete-zone");
-              trash.classList.add("hovered");
+              // const trash = document.getElementById("delete-zone");
+              // trash.classList.add("hovered");
             }}
             eventDragStop={(info) => {
-              const trash = document.getElementById("delete-zone");
-              trash.classList.remove("hovered");
+              const calendarEl = calendarRef.current?.elRef?.current;
+              if (!calendarEl) return;
 
-              const rect = trash.getBoundingClientRect();
+              const calendarRect = calendarEl.getBoundingClientRect();
               const { clientX: x, clientY: y } = info.jsEvent;
 
-              const inTrash =
-                x >= rect.left &&
-                x <= rect.right &&
-                y >= rect.top &&
-                y <= rect.bottom;
+              const insideCalendar =
+                x >= calendarRect.left &&
+                x <= calendarRect.right &&
+                y >= calendarRect.top &&
+                y <= calendarRect.bottom;
 
-              if (inTrash) {
-                if (window.confirm(`Delete event "${info.event.title}"?`)) {
-                  info.event.remove();
-                  if (onEventDelete) {
-                    onEventDelete(info.event.id);
+              if (!insideCalendar) {
+                  const confirmDelete = window.confirm(`Delete "${info.event.title}"?`);
+                  if (confirmDelete) {
+                    const el = info.el;
+                    el.classList.add("deleting");
+                    setTimeout(() => {
+                      info.event.remove();
+                      if (onEventDelete) onEventDelete(info.event.id);
+                    }, 300); // match animation duration
                   }
                 }
-              }
+
             }}
+
+
             eventResize={(info) => {
               // Restrict resizing to a maximum of 2 hours
               const start = info.event.start;
@@ -278,7 +310,7 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit }) {
             eventReceive={(info) => {
               const start = info.event.start;
               const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // +2 hours
-
+            
               onEventAdd({
                 id: String(Date.now()),
                 title: info.event.title,

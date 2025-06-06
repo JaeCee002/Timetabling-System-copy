@@ -60,7 +60,7 @@
     padding: 0 !important;
   }
   /*TRASH CAN*/
-  .delete-zone{
+  /* .delete-zone{
     margin-top: 0rem;
     padding: 1rem;
     width: 100px;
@@ -69,12 +69,31 @@
     border-radius: 50%;
     text-align: center;
     transition: transform 0.3s, background-color 0.3s;
+    z-index: 0;
 }
 .delete-zone.hovered {
   color: rgb(204, 4, 4);
   transform: scale(1.1);      
   cursor: grab;
+} */
+/* Add this in your CSS */
+@keyframes fadeAndShrink {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: scale(0.5);
+  }
 }
+
+.fc-event.deleting {
+  animation: fadeAndShrink 0.3s forwards;
+}
+
+
+
 .form-select {
   background-color: #080909 !important;
   color: #fbfcfc !important;
