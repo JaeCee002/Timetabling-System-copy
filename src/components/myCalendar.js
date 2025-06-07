@@ -2,13 +2,13 @@ import React, { useRef, useEffect, useState } from "react";
 import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import timeGridPlugin from "@fullcalendar/timegrid";
-import interactionPlugin, { } from "@fullcalendar/interaction";
+import interactionPlugin from "@fullcalendar/interaction";
 import bootstrap5Plugin from '@fullcalendar/bootstrap5';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Modal, Button } from "react-bootstrap";
 import "./myCalendar.css";
 
-function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit }) {
+function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit, mode = "admin" }) {
   const calendarRef = useRef();
   const [alert, setAlert] = useState({ show: false, message: "", x: 0, y: 0 });
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -16,6 +16,8 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit }) {
   const [editMode, setEditMode] = useState(false);
   const [editLecturer, setEditLecturer] = useState("");
   const [editClassroom, setEditClassroom] = useState("");
+
+  const isAdmin = mode === "admin";
 
   const lecturers = [
     "Dr. Banda", "Mr. Zulu", "Prof. Phiri", "Ms. Mwansa",
@@ -26,7 +28,6 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit }) {
     "C 305", "C 306", "C 307", "C 308"
   ];
 
-  // Hide alert after 2 seconds
   useEffect(() => {
     if (alert.show) {
       const timer = setTimeout(() => setAlert({ ...alert, show: false }), 2000);
@@ -34,7 +35,6 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit }) {
     }
   }, [alert]);
 
-  // Helper to show alert above event
   const showAlertAboveEvent = (info, message) => {
     const eventEl = info.el;
     if (eventEl) {
@@ -55,7 +55,6 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit }) {
     }
   };
 
-  // Handle event click
   const handleEventClick = (info) => {
     setSelectedEvent(info.event);
     setEditLecturer(info.event.extendedProps?.lecturer || "");
@@ -64,7 +63,6 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit }) {
     setEditMode(false);
   };
 
-  // Handle delete
   const handleDelete = () => {
     if (selectedEvent) {
       selectedEvent.remove();
@@ -73,13 +71,11 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit }) {
     }
   };
 
-  // Handle edit save
   const handleEditSave = () => {
     if (selectedEvent) {
-      selectedEvent.setProp(
-        "title",
-        `${selectedEvent.title.split('\n')[0]}\n(${editLecturer}, ${editClassroom})`
-      );
+      const baseTitle = selectedEvent.title.split('\n')[0];
+      const newTitle = `${baseTitle}\n(${editLecturer}, ${editClassroom})`;
+      selectedEvent.setProp("title", newTitle);
       selectedEvent.setExtendedProp("lecturer", editLecturer);
       selectedEvent.setExtendedProp("classroom", editClassroom);
       setShowEventModal(false);
@@ -88,7 +84,6 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit }) {
 
   return (
     <div className="container ms-10" style={{ marginLeft: '13rem', position: "relative" }}>
-      {/* Alert Popup */}
       {alert.show && (
         <div className="delete-zone"
           style={{
@@ -107,38 +102,37 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit }) {
             alignItems: "center",
             minWidth: "220px",
           }}
-        > 
+        >
           <span style={{ fontSize: "1.5rem", marginRight: "10px", color: "#b91c1c" }}>✖</span>
           {alert.message}
         </div>
       )}
-      {/* Delete Zone
-        Delete Zone
-<div
-  id="delete-zone"
-  style={{
-    position: "fixed",
-    bottom: "20px",
-    right: "20px",
-    width: "100px",
-    height: "100px",
-    backgroundColor: "#ffdddd",
-    border: "2px dashed #ff0000",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    borderRadius: "10px",
-    fontSize: "50px",
-    fontWeight: "bold",
-    color: "#ff0000",
-    zIndex: 2000
-  }}
->
-  <i className="bi bi-trash"></i>
-</div> */}
 
+      {/*{ {isAdmin && (
+        <div
+          id="delete-zone"
+          style={{
+            position: "fixed",
+            bottom: "20px",
+            right: "20px",
+            width: "100px",
+            height: "100px",
+            backgroundColor: "#ffdddd",
+            border: "2px dashed #ff0000",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            borderRadius: "10px",
+            fontSize: "50px",
+            fontWeight: "bold",
+            color: "#ff0000",
+            zIndex: 2000
+          }}
+        >
+          🗑
+        </div>
+      )} */}
 
-      {/* Event Modal */}
       <Modal show={showEventModal} onHide={() => setShowEventModal(false)} centered>
         <Modal.Header closeButton>
           <Modal.Title>
@@ -190,7 +184,7 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit }) {
           )}
         </Modal.Body>
         <Modal.Footer>
-          {!editMode ? (
+          {isAdmin && (!editMode ? (
             <>
               <Button variant="danger" onClick={handleDelete}>
                 Delete
@@ -212,7 +206,7 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit }) {
                 Save
               </Button>
             </>
-          )}
+          ))}
         </Modal.Footer>
       </Modal>
 
@@ -223,15 +217,15 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit }) {
         <div className="card-body">
           <div className="added-courses"></div>
 
-<FullCalendar
+          <FullCalendar
             ref={calendarRef}
             plugins={[dayGridPlugin, interactionPlugin, timeGridPlugin, bootstrap5Plugin]}
             themeSystem="bootstrap5"
             initialView="timeGridWeek"
-            editable={true}
+            editable={isAdmin}
             eventResizableFromStart={false}
-            selectable={true}
-            droppable={true}
+            selectable={isAdmin}
+            droppable={isAdmin}
             firstDay={1}
             allDaySlot={false}
             headerToolbar={{
@@ -243,11 +237,8 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit }) {
               weekday: 'short'
             }}
             eventClick={handleEventClick}
-            eventDragStart={(info) => {
-              // const trash = document.getElementById("delete-zone");
-              // trash.classList.add("hovered");
-            }}
             eventDragStop={(info) => {
+              if (!isAdmin) return;
               const calendarEl = calendarRef.current?.elRef?.current;
               if (!calendarEl) return;
 
@@ -261,40 +252,43 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit }) {
                 y <= calendarRect.bottom;
 
               if (!insideCalendar) {
-                  const confirmDelete = window.confirm(`Delete "${info.event.title}"?`);
-                  if (confirmDelete) {
-                    const el = info.el;
-                    el.classList.add("deleting");
-                    setTimeout(() => {
-                      info.event.remove();
-                      if (onEventDelete) onEventDelete(info.event.id);
-                    }, 300); // match animation duration
-                  }
+                const confirmDelete = window.confirm(`Delete "${info.event.title}"?`);
+                if (confirmDelete) {
+                  const el = info.el;
+                  el.classList.add("deleting");
+                  setTimeout(() => {
+                    info.event.remove();
+                    if (onEventDelete) onEventDelete(info.event.id);
+                  }, 300);
                 }
-
+              }
             }}
-
-
             eventResize={(info) => {
-              // Restrict resizing to a maximum of 2 hours
               const start = info.event.start;
               const end = info.event.end;
+              if (!isAdmin) {
+                info.revert();
+                return;
+              }
               if (start && end) {
                 const diffMs = end.getTime() - start.getTime();
-                const maxDurationMs = 2 * 60 * 60 * 1000; // 2 hours in ms
+                const maxDurationMs = 2 * 60 * 60 * 1000;
                 if (diffMs > maxDurationMs) {
-                  info.revert(); // Cancel the resize
+                  info.revert();
                   showAlertAboveEvent(info, "✖ Maximum allowed duration is 2 hours.");
                 }
               }
             }}
             eventDrop={(info) => {
-              // Also restrict moving events so they can't be extended beyond 2 hours
               const start = info.event.start;
               const end = info.event.end;
+              if (!isAdmin) {
+                info.revert();
+                return;
+              }
               if (start && end) {
                 const diffMs = end.getTime() - start.getTime();
-                const maxDurationMs = 2 * 60 * 60 * 1000; // 2 hours in ms
+                const maxDurationMs = 2 * 60 * 60 * 1000;
                 if (diffMs > maxDurationMs) {
                   info.revert();
                   showAlertAboveEvent(info, "✖ Maximum allowed duration is 2 hours.");
@@ -308,14 +302,19 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit }) {
             expandRows={false}
             events={events}
             eventReceive={(info) => {
+              if (!isAdmin) {
+                info.event.remove();
+                return;
+              }
+
               const start = info.event.start;
-              const end = new Date(start.getTime() + 2 * 60 * 60 * 1000); // +2 hours
-            
+              const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
+
               onEventAdd({
                 id: String(Date.now()),
                 title: info.event.title,
                 date: info.event.startStr,
-                start: info.event.start,
+                start,
                 end
               });
 
