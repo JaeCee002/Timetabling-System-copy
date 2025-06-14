@@ -8,7 +8,8 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { Modal, Button } from "react-bootstrap";
 import "./myCalendar.css";
 
-function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit, mode = "admin" }) {
+function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit,
+                      mode = "admin", draggedEvents}) {
   const calendarRef = useRef();
   const [alert, setAlert] = useState({ show: false, message: "", x: 0, y: 0 });
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -108,31 +109,6 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit, mode = "ad
         </div>
       )}
 
-      {/*{ {isAdmin && (
-        <div
-          id="delete-zone"
-          style={{
-            position: "fixed",
-            bottom: "20px",
-            right: "20px",
-            width: "100px",
-            height: "100px",
-            backgroundColor: "#ffdddd",
-            border: "2px dashed #ff0000",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            borderRadius: "10px",
-            fontSize: "50px",
-            fontWeight: "bold",
-            color: "#ff0000",
-            zIndex: 2000
-          }}
-        >
-          🗑
-        </div>
-      )} */}
-
       <Modal show={showEventModal} onHide={() => setShowEventModal(false)} centered>
         <Modal.Header closeButton>
           <Modal.Title>
@@ -215,7 +191,25 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit, mode = "ad
           TIMETABLING SYSTEM
         </div>
         <div className="card-body">
-          <div className="added-courses"></div>
+          
+          {draggedEvents && draggedEvents.length > 0 && (
+            <div className="p-3 d-flex flex-wrap gap-1">
+              {draggedEvents.map((e, index) => (
+                <div
+                  key={index}
+                  className="btn btn-dark"
+                  style={{
+                    borderRadius: '8px',
+                    padding: '5px 16px',
+                    fontSize: '14px',
+                    whiteSpace: 'nowrap'
+                  }}
+                >
+                  {e.title.split('\n')[0]}
+                </div>
+              ))}
+            </div>
+          )}
 
           <FullCalendar
             ref={calendarRef}
@@ -301,23 +295,24 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit, mode = "ad
             slotDuration="00:30:00"
             expandRows={false}
             events={events}
+
             eventReceive={(info) => {
               if (!isAdmin) {
                 info.event.remove();
                 return;
               }
-
+              
               const start = info.event.start;
               const end = new Date(start.getTime() + 2 * 60 * 60 * 1000);
-
-              onEventAdd({
+              
+              const newEvent = {
                 id: String(Date.now()),
                 title: info.event.title,
                 date: info.event.startStr,
                 start,
                 end
-              });
-
+              };
+              onEventAdd(newEvent);
               info.event.remove();
             }}
           />

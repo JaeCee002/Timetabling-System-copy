@@ -1,24 +1,25 @@
-// LoginPage
-//username: admin@example.com
-// password: admin123
+// Updated LoginPage.js
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from './AuthContext'; // Import the auth context
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
   const navigate = useNavigate();
+  const { login } = useAuth(); // Use the auth context
 
   const handleLogin = (e) => {
     e.preventDefault();
-
-    // Mock authentication logic
-    if (email === "admin@example.com" && password === "admin123") {
-      navigate("/adminCalendar");
-    } else if (email === "user@example.com" && password === "user123") {
-      navigate("/userCalendar");
+    setError("");
+    
+    const result = login(email, password);
+    
+    if (result.success) {
+      navigate(result.route);
     } else {
-      alert("Invalid credentials. Try admin@example.com or user@example.com.");
+      setError("Invalid credentials. Try admin@example.com or user@example.com.");
     }
   };
 
@@ -26,6 +27,11 @@ const LoginPage = () => {
     <div style={styles.container}>
       <form style={styles.form} onSubmit={handleLogin}>
         <h2 style={styles.title}>Login</h2>
+        <h4>Hint: Admin: admin@example.com, admin123</h4>
+        <h4>User: user@example.com, user123</h4>
+        
+        {error && <div style={styles.error}>{error}</div>}
+        
         <input
           type="email"
           placeholder="Email"
@@ -82,6 +88,15 @@ const styles = {
     border: "none",
     borderRadius: "4px",
     cursor: "pointer",
+  },
+  error: {
+    color: "#dc3545",
+    backgroundColor: "#f8d7da",
+    padding: "0.5rem",
+    borderRadius: "4px",
+    marginBottom: "1rem",
+    fontSize: "14px",
+    textAlign: "center",
   },
 };
 
