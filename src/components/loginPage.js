@@ -10,16 +10,16 @@ const LoginPage = () => {
   const navigate = useNavigate();
   const { login } = useAuth(); // Use the auth context
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
     setError("");
     
-    const result = login(email, password);
+    const result = await login(email, password);
     
     if (result.success) {
       navigate(result.route);
     } else {
-      setError("Invalid credentials. Try admin@example.com or user@example.com.");
+      setError("Invalid credentials");
     }
   };
 
@@ -27,8 +27,6 @@ const LoginPage = () => {
     <div style={styles.container}>
       <form style={styles.form} onSubmit={handleLogin}>
         <h2 style={styles.title}>Login</h2>
-        <h4>Hint: Admin: admin@example.com, admin123</h4>
-        <h4>User: user@example.com, user123</h4>
         
         {error && <div style={styles.error}>{error}</div>}
         

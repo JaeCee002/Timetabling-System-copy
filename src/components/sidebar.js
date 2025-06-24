@@ -1,9 +1,9 @@
-// Sidebar.js
-
 import React, { useState, useEffect, useRef } from "react";
 import { Draggable } from "@fullcalendar/interaction";
 import { useNavigate } from "react-router-dom";
 import "./sidebar.css";
+import { fetchCourses, fetchPrograms, fetchSchools } from "../api/timetableAPI";
+import { useAuth } from "./AuthContext";
 
 const CourseButton = ({ course }) => {
   const [showTip, setShowTip] = useState(false);
@@ -15,62 +15,62 @@ const CourseButton = ({ course }) => {
       onMouseLeave={() => setShowTip(false)}
       style={{ position: "relative", width: "100%" }}
     >
-      {showTip && (
-        <div className="drag-tip">
-          Drag this course to the calendar
-        </div>
-      )}
+      {showTip && <div className="drag-tip">Drag this course to the calendar</div>}
       <button
         className="fc-event course-btn"
-        data-event-title={course}
+        data-event-title={course.name || course}
         type="button"
         tabIndex={0}
       >
-        {course}
+        {course.name || course}
       </button>
     </div>
   );
 };
 
-const Sidebar = () => {
-  const [selectedSchool, setSelectedSchool] = useState("");
+const Sidebar = ({ onSchoolSelect, onProgramSelect, onYearSelect }) => {
+  const { isAuthenticated } = useAuth();
+
+  const [schools, setSchools] = useState([]);
   const [programs, setPrograms] = useState([]);
-  const [program, setProgram] = useState("");
-  const [year, setYear] = useState("");
+  const [courses, setCourses] = useState([]);
+
+  const [selectedSchool, setSelectedSchool] = useState("");
+  const [selectedProgram, setSelectedProgram] = useState("");
+  const [selectedYear, setSelectedYear] = useState("");
 
   const sidebarRef = useRef(null);
   const navigate = useNavigate();
+  const university = "Copperbelt University";
 
-  const schoolPrograms = {
-    ict: ["Computer Science", "Information Systems", "Bio-Informatics"],
-    business: ["Accounting", "Finance", "Marketing"],
-  };
+  // Fetch schools on load
+  useEffect(() => {
+    if (!university || !isAuthenticated) return;
 
-  const handleSchoolChange = (event) => {
-    const school = event.target.value;
-    setSelectedSchool(school);
-    setPrograms(school ? schoolPrograms[school] || [] : []);
-    setProgram("");
-    setYear("");
-  };
+    fetchSchools(university)
+      .then(data => setSchools(data.schools))
+      .catch(err => console.error("School fetch error:", err));
+  }, []);
 
-  const handleProgramChange = (event) => {
-    setProgram(event.target.value);
-    setYear("");
-  };
+  // Fetch programs when school is selected
+  useEffect(() => {
+    if (!selectedSchool) return;
 
-  const handleYearChange = (event) => {
-    setYear(event.target.value);
-  };
+    fetchPrograms(selectedSchool)
+      .then(data => setPrograms(data.programs))
+      .catch(err => console.error("Program fetch error:", err));
+  }, [selectedSchool]);
 
-  const yearCourses = {
-    1: ["CS120", "CS130", "CS150", "MA110", "PH110", "LA111"],
-    2: ["CS220", "CS225", "CS230", "CS235", "CS250", "CS270", "MA210", "PH212"],
-    3: ["CS301", "CS320", "CS345", "CS350", "CS351", "CS361", "MA320"],
-    4: ["CS425", "CS430", "CS441", "CS450", "CS460", "CS470", "CS480"],
-  };
+  // Fetch courses when program AND year are selected
+  useEffect(() => {
+    if (!selectedProgram || !selectedYear) return;
 
-  // ✅ Hook FullCalendar's Draggable to sidebar courses
+    fetchCourses(selectedProgram, selectedYear)
+      .then(data => setCourses(data.courses))
+      .catch(err => console.error("Courses fetch error:", err));
+  }, [selectedProgram, selectedYear]);
+
+  // Setup draggable
   useEffect(() => {
     if (sidebarRef.current) {
       new Draggable(sidebarRef.current, {
@@ -84,25 +84,48 @@ const Sidebar = () => {
     }
   }, []);
 
+  const handleSchoolChange = (e) => {
+    const value = e.target.value;
+    setSelectedSchool(value);
+    setSelectedProgram("");
+    setSelectedYear("");
+    setCourses([]);
+    onSchoolSelect?.(value);
+  };
+
+  const handleProgramChange = (e) => {
+    const value = e.target.value;
+    setSelectedProgram(value);
+    setSelectedYear("");
+    setCourses([]);
+    onProgramSelect?.(value);
+  };
+
+  const handleYearChange = (e) => {
+    const value = e.target.value;
+    setSelectedYear(value);
+    onYearSelect?.(value);
+  };
+
   return (
     <div className="sidebar" ref={sidebarRef}>
       <h2>School and Program</h2>
+
       <select id="schoolSelect" value={selectedSchool} onChange={handleSchoolChange}>
         <option value="">Select School</option>
-        <option value="ict">School of ICT</option>
-        <option value="business">School of Business</option>
-      </select>
-
-      <select id="programSelect" value={program} onChange={handleProgramChange} disabled={!selectedSchool}>
-        <option value="">Select Program</option>
-        {programs.map((program, index) => (
-          <option key={index} value={program.toLowerCase().replace(/\s+/g, "-")}>
-            {program}
-          </option>
+        {schools.map((school, i) => (
+          <option key={i} value={school.school_id}>{school.school_name}</option>
         ))}
       </select>
 
-      <select id="yearSelect" value={year} onChange={handleYearChange} disabled={!program}>
+      <select id="programSelect" value={selectedProgram} onChange={handleProgramChange} disabled={!selectedSchool}>
+        <option value="">Select Program</option>
+        {programs.map((program, i) => (
+          <option key={i} value={program.program_id}>{program.program_name}</option>
+        ))}
+      </select>
+
+      <select id="yearSelect" value={selectedYear} onChange={handleYearChange} disabled={!selectedProgram}>
         <option value="">Select Year</option>
         <option value="1">First Year</option>
         <option value="2">Second Year</option>
@@ -112,10 +135,11 @@ const Sidebar = () => {
 
       <h2>Courses</h2>
       <div className="course-list">
-        {(yearCourses[year] || []).map((course) => (
-          <CourseButton key={course} course={course} />
+        {(courses || []).map((course) => (
+          <CourseButton key={course || course} course={course.course_code} />
         ))}
       </div>
+
       <button
         className="admin-dashboard-btn"
         style={{ marginTop: "2rem", width: "100%" }}
@@ -123,10 +147,8 @@ const Sidebar = () => {
       >
         Admin Dashboard
       </button>
-      
-
     </div>
-  ); 
+  );
 };
 
 export default Sidebar;

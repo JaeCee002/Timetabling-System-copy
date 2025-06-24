@@ -1,27 +1,60 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import Sidebar from "./sidebar"
 import MyCalendar from "./myCalendar"
 import { Modal, Button } from "react-bootstrap";
 import UserAccount from "./UserAccount";
+import { fetchAdminTimetable, fetchLecturers, fetchClassrooms } from "../api/timetableAPI";
+import { convertTimetableEntry } from "../utils/convertTimetableEntry";
+import { useAuth } from "./AuthContext";
 
 function AdminCalendar(){
+    const { isAuthenticated } = useAuth();
 
     const [showModal, setShowModal] = useState(false);
     const [events, setEvents] = useState([]);
     const [currentEvent, setCurrentEvent] = useState(null);
+    const [lecturers, setLecturers] = useState([]);
+    const [classrooms, setClassrooms] = useState([]);
     const [selectedLecturer, setSelectedLecturer] = useState("");
     const [selectedClassroom, setSelectedClassroom] = useState("");
     const [draggedEvents, setDraggedEvents] = useState([]);
 
-    const lecturers = [
-        "Dr. Banda", "Mr. Zulu", "Prof. Phiri", "Ms. Mwansa",
-        "Mr. Chanda", "Dr. Kafwimbi", "Prof. Mbewe", "Ms. Chibale"
-    ];
-    const classrooms = [
-        "C 208", "C 301", "C 302", "C 303",
-        "C 305", "C 306", "C 307", "C 308"
-    ];
+    const [school, setSchool] = useState(null);
+    const [program, setProgram] = useState(null);
+    const [year, setYear] = useState(null);
+
+
+    useEffect(() => {
+        if (!isAuthenticated) return;
+
+        fetchLecturers()
+            .then((data) => {
+                const formatted = data.lecturers;
+                setLecturers(formatted);
+            })
+            .catch(err => console.error("Lecturer fetch error:", err));
+
+        fetchClassrooms()
+            .then((data) => {
+                const formatted = data.classes;
+                setClassrooms(formatted);
+            })
+            .catch(err => console.error("Classroom fetch error:", err));
+    }, [isAuthenticated]);
+
+    useEffect(() => {
+        if (!program || !year) return;
+
+        fetchAdminTimetable(school, program, year)
+            .then((data) => {
+                const formatted = data
+                    .map(entry => convertTimetableEntry(entry))
+                    .filter(e => e !== null);
+                setEvents(formatted);
+            })
+            .catch(err => console.error("Admin timetable fetch error:", err));
+    }, [school, program, year]);
 
     // Handle adding a new event
     const handleEventAdd = (event) => {
@@ -74,11 +107,11 @@ function AdminCalendar(){
         
         const updatedEvent = {
             ...currentEvent,
-            title: `${currentEvent.title}\n(${selectedLecturer}, ${selectedClassroom})`,
+            title: `${currentEvent.title}\n(${selectedLecturer.name}, ${selectedClassroom.room_id})`,
             extendedProps: {
                 ...currentEvent.extendedProps,
-                lecturer: selectedLecturer,
-                classroom: selectedClassroom,
+                lecturer: selectedLecturer.name,
+                classroom: selectedClassroom.room_id,
                 originalTitle: currentEvent.title
             }
         };
@@ -151,7 +184,11 @@ function AdminCalendar(){
             <UserAccount userRole="admin" />
         </div>
         
-        <Sidebar />
+        <Sidebar 
+            onSchoolSelect={setSchool}
+            onProgramSelect={setProgram}
+            onYearSelect={setYear}
+        />
         <MyCalendar
             events={events}
             onEventAdd={handleEventAdd}
@@ -172,15 +209,15 @@ function AdminCalendar(){
                 <div className="custom-dropdown mb-4">
                     <div className="dropdown-label">Lecturer</div>
                     <div className="dropdown-selected" tabIndex={0}>
-                        {selectedLecturer || "Select lecturer"}
+                        {selectedLecturer.name || "Select lecturer"}
                         <div className="dropdown-list">
                             {lecturers.map((lec, i) => (
                                 <div
                                     key={i}
-                                    className={`dropdown-item${lec === selectedLecturer ? " selected" : ""}`}
+                                    className={`dropdown-item${lec.user_id === selectedLecturer?.user_id ? " selected" : ""}`}
                                     onClick={() => setSelectedLecturer(lec)}
                                 >
-                                    {lec}
+                                    {lec.name}
                                 </div>
                             ))}
                         </div>
@@ -190,15 +227,15 @@ function AdminCalendar(){
                 <div className="custom-dropdown mb-2">
                     <div className="dropdown-label">Classroom</div>
                     <div className="dropdown-selected" tabIndex={0}>
-                        {selectedClassroom || "Select classroom"}
+                        {selectedClassroom.room_id || "Select classroom"}
                         <div className="dropdown-list">
                             {classrooms.map((room, i) => (
                                 <div
                                     key={i}
-                                    className={`dropdown-item${room === selectedClassroom ? " selected" : ""}`}
+                                    className={`dropdown-item${room.room_id === selectedClassroom?.room_id ? " selected" : ""}`}
                                     onClick={() => setSelectedClassroom(room)}
                                 >
-                                    {room}
+                                    {room.room_id}
                                 </div>
                             ))}
                         </div>

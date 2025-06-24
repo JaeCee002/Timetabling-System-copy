@@ -1,28 +1,24 @@
-import React from "react";
+import React, { useEffect, useState } from "react";
 import MyCalendar from "./myCalendar";
-
+import { fetchUserTimetable } from "../api/timetableAPI";
+import { convertTimetableEntry } from "../utils/convertTimetableEntry";
 
 function UserCalendar() {
-  const fetchEvents = () => {
-    // You can replace this with real data fetching
-    return [
-      {
-        id: "1",
-        title: "Math 101\n(Dr. Banda, C 208)",
-        start: "2025-06-10T08:00:00",
-        end: "2025-06-10T10:00:00",
-        extendedProps: {
-          lecturer: "Dr. Banda",
-          classroom: "C 208"
-        }
-      },
-      // more events...
-    ];
-  };
+  const [entries, setEntries] = useState([]);
 
-  const events = fetchEvents();
+  useEffect(() => {
+    fetchUserTimetable()
+      .then((data) => {
+        const formatted = data
+          .map(entry => convertTimetableEntry(entry))
+          .filter(event => event !== null);
 
-  return <MyCalendar events={events} mode="user" />;
+        setEntries(formatted);
+      })
+      .catch((err) => console.log("Fetch error:", err));
+  }, []);
+
+  return <MyCalendar events={entries} mode="user" />;
 }
 
 export default UserCalendar;

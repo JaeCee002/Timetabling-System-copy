@@ -1,5 +1,6 @@
 // AuthContext.js - Create this new file
-import React, { createContext, useContext, useState } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { login as loginFromAPI } from "../api/timetableAPI.js";
 
 const AuthContext = createContext();
 
@@ -13,30 +14,49 @@ export const useAuth = () => {
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  const login = (email, password) => {
-    if (email === "admin@example.com" && password === "admin123") {
-      const userData = {
-        email: "admin@example.com",
-        role: "admin",
-        name: "Administrator"
-      };
-      setUser(userData);
-      return { success: true, user: userData, route: "/adminCalendar" };
-    } else if (email === "user@example.com" && password === "user123") {
-      const userData = {
-        email: "user@example.com",
-        role: "user",
-        name: "User"
-      };
-      setUser(userData);
-      return { success: true, user: userData, route: "/userCalendar" };
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        setLoading(false);
+      } catch (error) {
+        setLoading(false);
+      }
+    };
+    
+    checkSession();
+  }, []);
+
+  const login = async (email, password) => {
+    const result = await loginFromAPI(email, password);
+    console.log(result);
+
+    if (result.success && result.user) {
+      setUser(result.user);
+      setIsAuthenticated(true);
+
+      const route = result.user.role === "admin" 
+          ? "/adminCalendar" 
+          : "/userCalendar";
+        
+        return {
+          success: true,
+          user: result.user,
+          route
+        };
     }
-    return { success: false };
+
+    return {
+      success: false,
+      error: result.error || "Invalid credentials"
+    };
   };
 
   const logout = () => {
     setUser(null);
+    setIsAuthenticated(false);
   };
 
   const switchAccount = () => {
@@ -45,10 +65,11 @@ export const AuthProvider = ({ children }) => {
 
   const value = {
     user,
+    isAuthenticated,
     login,
     logout,
-    switchAccount,
-    isAuthenticated: !!user
+    loading,
+    switchAccount
   };
 
   return (

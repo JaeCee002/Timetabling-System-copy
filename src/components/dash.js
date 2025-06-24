@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import { fetchPendingUsers } from "../api/timetableAPI";
+import { useAuth} from "./AuthContext";
 import "./dash.css";
 
 const tabs = ["departments", "programs", "courses", "lecturers", "classrooms"];
@@ -13,6 +15,8 @@ const tabFields = {
 };
 
 const AdminDashboard = () => {
+  const {isAuthenticated} = useAuth();
+
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const defaultTab = searchParams.get("tab") || "departments";
@@ -27,6 +31,20 @@ const AdminDashboard = () => {
     classrooms: [],
   });
   const [editIndex, setEditIndex] = useState({});
+
+  const [pendingUsers, setPendingUsers] = useState([]);
+  const [selectedRoles, setSelectedRoles] = useState({});
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    fetchPendingUsers()
+      .then((data) => {
+        const formatted = data.users;
+        setPendingUsers(formatted);
+      })
+      .catch((err) => console.error("Failed to fetch pending users:", err));
+  }, [isAuthenticated]);
+
 
   useEffect(() => {
     setSearchParams({ tab: activeTab });
@@ -131,12 +149,37 @@ const AdminDashboard = () => {
     );
   };
 
+  const handleRoleChange = (userId, role) => {
+    setSelectedRoles((prev) => ({ ...prev, [userId]: role }));
+  };
+
+  const handleSetRole = (userId) => {
+    const role = selectedRoles[userId];
+    if (!role) return alert("Please select a role.");
+
+    fetch("/api/set-role", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ user_id: userId, role })
+    })
+      .then((res) => {
+        if (!res.ok) throw new Error("Failed to set role");
+        // Remove user from pending list after update
+        setPendingUsers((prev) => prev.filter((u) => u.id !== userId));
+      })
+      .catch((err) => {
+        console.error("Role set error:", err);
+        alert("Failed to set role.");
+      });
+  };
+
+
   return (
     <>
       {/* Back button outside the dashboard, top left */}
       <button
         className="btn bg-blue-600 text-white px-4 py-2 rounded"
-        onClick={() => navigate("/")}
+        onClick={() => navigate("/adminCalendar")}
         style={{
           position: "fixed",
           top: "20px",
@@ -146,6 +189,49 @@ const AdminDashboard = () => {
       >
         ← Back to Main Page
       </button>
+
+      {pendingUsers.length > 0 && (
+        <div className="pending-users p-4 border border-gray-400 rounded mb-4">
+          <h2 className="text-xl font-bold mb-2">Pending User Role Assignments</h2>
+          <table className="min-w-full">
+            <thead>
+              <tr>
+                <th className="px-2 py-1 text-left">Email</th>
+                <th className="px-2 py-1 text-left">Assign Role</th>
+                <th className="px-2 py-1 text-left">Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {pendingUsers.map((user) => (
+                <tr key={user.id} className="border-t">
+                  <td className="px-2 py-1">{user.email}</td>
+                  <td className="px-2 py-1">
+                    <select
+                      className="border px-2 py-1 rounded"
+                      value={selectedRoles[user.user_id] || ""}
+                      onChange={(e) => handleRoleChange(user.user_id, e.target.value)}
+                    >
+                      <option value="">Select Role</option>
+                      <option value="admin">Admin</option>
+                      <option value="lecturer">Lecturer</option>
+                      <option value="student">Student</option>
+                    </select>
+                  </td>
+                  <td className="px-2 py-1">
+                    <button
+                      className="btn bg-blue-600 text-white px-3 py-1 rounded"
+                      onClick={() => handleSetRole(user.user_id)}
+                    >
+                      Set Role
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+
 
       <div className="admin-panel p-4">
         <h1 className="text-2xl font-bold mb-4">Admin Dashboard - Data Management</h1>

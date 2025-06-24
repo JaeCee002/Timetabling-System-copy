@@ -10,6 +10,7 @@
     "@fullcalendar/react": "^6.1.17",
     "@fullcalendar/resource-timeline": "^6.1.17",
     "@fullcalendar/timegrid": "^6.1.17",
+    "axios": "^1.10.0",
     "bootstrap": "^5.3.3",
     "cra-template": "1.2.0",
     "moment": "^2.30.1",
