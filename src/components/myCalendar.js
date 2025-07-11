@@ -6,6 +6,7 @@ import interactionPlugin from "@fullcalendar/interaction";
 import bootstrap5Plugin from '@fullcalendar/bootstrap5';
 import 'bootstrap/dist/css/bootstrap.min.css';
 import { Modal, Button } from "react-bootstrap";
+import { useCalendarStore } from "./calendarStore";
 import "./myCalendar.css";
 
 function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit,
@@ -13,12 +14,20 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit,
   const calendarRef = useRef();
   const [alert, setAlert] = useState({ show: false, message: "", x: 0, y: 0 });
   const [selectedEvent, setSelectedEvent] = useState(null);
-  const [showEventModal, setShowEventModal] = useState(false);
+  const [showEventModal, setShowEventModal] = useState(false);    
   const [editMode, setEditMode] = useState(false);
   const [editLecturer, setEditLecturer] = useState("");
   const [editClassroom, setEditClassroom] = useState("");
 
   const isAdmin = mode === "admin";
+
+  //making calendarRef global
+  const setCalendarApi = useCalendarStore(state => state.setCalendarApi);
+  useEffect(() => {
+    if (calendarRef.current) {
+      setCalendarApi(calendarRef.current.getApi());
+    }
+  }, [setCalendarApi]);
 
   const lecturers = [
     "Dr. Banda", "Mr. Zulu", "Prof. Phiri", "Ms. Mwansa",

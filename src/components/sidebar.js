@@ -98,7 +98,10 @@ const Sidebar = ({ onSchoolSelect, onProgramSelect, onYearSelect }) => {
     setSelectedProgram(value);
     setSelectedYear("");
     setCourses([]);
-    onProgramSelect?.(value);
+    // Find the selected program object
+    const selected = programs.find(p => p.program_id === value);
+    // Pass both ID and name to parent
+    onProgramSelect?.(value, selected ? selected.program_name : "");
   };
 
   const handleYearChange = (e) => {
