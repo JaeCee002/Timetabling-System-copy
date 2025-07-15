@@ -5,9 +5,9 @@ export const login = async(email, password) => {
     return response.data;
 }
 
-export const fetchAdminTimetable = async() => {
+export const fetchAdminTimetable = async(program, year) => {
     const response = await axios.get("/timetable", {
-        params: {},
+        params: {program, year},
     });
     return response.data;
 }
@@ -58,6 +58,11 @@ export const fetchPendingUsers = async() => {
     const response = await axios.get("/pending", {
         params: {},
     });
+    return response.data;
+}
+
+export const updatePendingUser = async(userId, role) => {
+    const response = await axios.post("/update_pending", {userId, role});
     return response.data;
 }
 

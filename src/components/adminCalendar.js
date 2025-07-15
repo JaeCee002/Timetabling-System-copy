@@ -54,7 +54,7 @@ export default function AdminCalendar(){
     useEffect(() => {
         if (!program || !year) return;
 
-        fetchAdminTimetable(school, program, year)
+        fetchAdminTimetable(program, year)
             .then((data) => {
                 const formatted = data
                     .map(entry => convertTimetableEntry(entry))
@@ -62,7 +62,7 @@ export default function AdminCalendar(){
                 setEvents(formatted);
             })
             .catch(err => console.error("Admin timetable fetch error:", err));
-    }, [school, program, year]);
+    }, [program, year]);
 
     // Handle adding a new event
     const handleEventAdd = (event) => {
@@ -117,7 +117,7 @@ export default function AdminCalendar(){
             return {
                 course_id: courseId,
                 program_name: program,
-                year: parseInt(year), // Ensure year is a number
+                year: parseInt(year),
                 day_of_week: e.start.toLocaleDateString("en-US", { weekday: "long" }),
                 start_time: e.start.toTimeString().slice(0, 8),
                 end_time: e.end.toTimeString().slice(0, 8),
@@ -276,10 +276,14 @@ export default function AdminCalendar(){
         <Sidebar 
             onSchoolSelect={setSchool}
             onProgramSelect={(id, name) => {
+                console.log("Program selection:", { id, name });
                 setProgramId(id);
                 setProgram(name);
             }}
-            onYearSelect={setYear}
+            onYearSelect={(year) => {
+                console.log("Year selection:", year);
+                setYear(parseInt(year));
+            }}
         />
         {/*Adding a save button*/}
         <button className="bg-dark text-white" onClick={hundleSaveAllEvents} 

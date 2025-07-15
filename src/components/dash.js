@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
-import { fetchPendingUsers } from "../api/timetableAPI";
+import { fetchPendingUsers, updatePendingUser } from "../api/timetableAPI";
 import { useAuth} from "./AuthContext";
 import "./dash.css";
 
@@ -157,13 +157,9 @@ const AdminDashboard = () => {
     const role = selectedRoles[userId];
     if (!role) return alert("Please select a role.");
 
-    fetch("/api/set-role", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ user_id: userId, role })
-    })
+    updatePendingUser(userId, role)
       .then((res) => {
-        if (!res.ok) throw new Error("Failed to set role");
+        if (res.status !== 'success') throw new Error("Failed to set role");
         // Remove user from pending list after update
         setPendingUsers((prev) => prev.filter((u) => u.id !== userId));
       })

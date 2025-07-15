@@ -18,11 +18,11 @@ const CourseButton = ({ course }) => {
       {showTip && <div className="drag-tip">Drag this course to the calendar</div>}
       <button
         className="fc-event course-btn"
-        data-event-title={course.name || course}
+        data-event-title={course.course_code || course}
         type="button"
         tabIndex={0}
       >
-        {course.name || course}
+        {course.course_code || course}
       </button>
     </div>
   );
@@ -99,7 +99,8 @@ const Sidebar = ({ onSchoolSelect, onProgramSelect, onYearSelect }) => {
     setSelectedYear("");
     setCourses([]);
     // Find the selected program object
-    const selected = programs.find(p => p.program_id === value);
+    const selected = programs.find(p => p.program_id === parseInt(value));
+    console.log("Sidebar debug:", { value, selected, programs });
     // Pass both ID and name to parent
     onProgramSelect?.(value, selected ? selected.program_name : "");
   };
@@ -139,7 +140,7 @@ const Sidebar = ({ onSchoolSelect, onProgramSelect, onYearSelect }) => {
       <h2>Courses</h2>
       <div className="course-list">
         {(courses || []).map((course) => (
-          <CourseButton key={course || course} course={course.course_code} />
+          <CourseButton key={course.course_code || course.course_code} course={course} />
         ))}
       </div>
 
