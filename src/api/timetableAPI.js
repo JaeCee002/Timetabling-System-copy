@@ -67,7 +67,6 @@ export const updatePendingUser = async(userId, role) => {
 }
 
 export const saveAdminTimetable = async(payload) => {
-    console.log("🌐 API: Sending payload:", payload);
 
     const response = await axios.post("/timetable/save", payload, {
         headers: {
@@ -77,6 +76,20 @@ export const saveAdminTimetable = async(payload) => {
     });
     return response.data;
 };
+
+
+export const checkClash = async (payload) => {
+    console.log("Sending payload (correct):", { entry: payload });
+
+    const response = await axios.post("/clash_detect", {
+        entry: payload
+    });
+    return response.data;
+};
+
+
+
+
 //  export const saveAdminTimetable = async (payload) => {
 //     try {
 //         console.log("🌐 API: Sending payload:", payload);
