@@ -266,6 +266,8 @@ export default function AdminCalendar() {
     // Reset modal state on close
     const handleModalClose = () => {
         setShowModal(false);
+        setIsClash(false);
+        setClashMessage("");
         setSelectedLecturer("");
         setSelectedClassroom("");
         setCurrentEvent(null);
