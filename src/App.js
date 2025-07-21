@@ -34,7 +34,12 @@ function App() {
             </ProtectedRoute>
         } />
         <Route path="/userCalendar" element={
-            <ProtectedRoute requiredRole="user">
+            <ProtectedRoute requiredRole="lecturer">
+              <UserCalendar />
+            </ProtectedRoute>
+        } />
+        <Route path="/userCalendar" element={
+            <ProtectedRoute requiredRole="student">
               <UserCalendar />
             </ProtectedRoute>
         } />

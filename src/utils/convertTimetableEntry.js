@@ -9,7 +9,7 @@ export function convertTimetableEntry(entry, referenceMonday = "2025-06-09") {
     Sunday: 6,
   };
 
-  const offset = dayOffset[entry.day];
+  const offset = dayOffset[entry.day_of_week];
   if (offset === undefined) return null;
 
   const baseDate = new Date(referenceMonday);
@@ -20,16 +20,16 @@ export function convertTimetableEntry(entry, referenceMonday = "2025-06-09") {
   };
 
   return {
-    id: entry.id,
-    title: `${entry.course_code} (${entry.lecturer}, ${entry.classroom})`,
+    id: entry.table_id,
+    title: `${entry.course_code} (${entry.lecturer_name}, ${entry.room_id})`,
     start: formatDateTime(baseDate, entry.start_time),
     end: formatDateTime(baseDate, entry.end_time),
     daysOfWeek: [offset + 1], // FullCalendar: Monday = 1
     startTime: entry.start_time,
     endTime: entry.end_time,
     extendedProps: {
-      lecturer: entry.lecturer,
-      classroom: entry.classroom,
+      lecturer: entry.lecturer_name,
+      classroom: entry.room_id,
       course: entry.course_code,
     },
   };
