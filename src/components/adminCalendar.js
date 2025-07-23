@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import Sidebar from "./sidebar"
 import MyCalendar from "./myCalendar"
+import { v4 as uuidv4 } from 'uuid';
 import { Modal, Button } from "react-bootstrap";
 import UserAccount from "./UserAccount";
 import { fetchAdminTimetable, fetchLecturers, fetchClassrooms, checkClash } from "../api/timetableAPI";
@@ -34,6 +35,7 @@ export default function AdminCalendar() {
 
     const [isClash, setIsClash] = useState(false);
     const [clashMessage, setClashMessage] = useState("");
+    const [clashEvents, setClashEvents] = useState([]);
 
 
 
@@ -70,12 +72,38 @@ export default function AdminCalendar() {
 
     // Handle adding a new event
     const handleEventAdd = (event) => {
-        setCurrentEvent(event);
+        const eventWithId = {
+            ...event,
+            id: uuidv4() // Add a unique ID to the event
+        };
+        setCurrentEvent(eventWithId);
         setShowModal(true);
     };
 
     // Handle updating an existing event (when moved/resized)
-    const handleEventUpdate = (updatedEvent) => {
+    const handleEventUpdate = async (updatedEvent) => {
+        if (!selectedLecturer || !selectedClassroom || !currentEvent) return;
+
+        const payload = {
+            lecturer_id: selectedLecturer.user_id,
+            room_id: selectedClassroom.room_id,
+            day_of_week: currentEvent.start.toLocaleDateString("en-US", { weekday: "long" }),
+            start_time: currentEvent.start.toTimeString().slice(0, 8),
+            end_time: currentEvent.end.toTimeString().slice(0, 8)
+        };
+
+        const res = await checkClash(payload);
+
+        if (res.status === "failure") {
+                setClashMessage(res.message);
+                setIsClash(true);
+                setClashEvents(prev => [...prev, clashEvents]);
+                alert(`Clash detected for ${currentEvent.title}: ${res.message}`);
+            }
+
+            // No clash
+            setIsClash(false);
+            setClashMessage("");
         
         setEvents(prev => prev.map(e =>
             e.id === updatedEvent.id ? updatedEvent : e
@@ -146,6 +174,14 @@ export default function AdminCalendar() {
                 return;
             }
 
+            if (clashEvents.length > 0) {
+                alert(
+                    "Cannot save. There are clashes:\n\n" +
+                    clashEvents.map(c => `${c.title} at ${c.timeSlot}: ${c.message}`).join("\n")
+                );
+                return;
+            }
+
             // Send the data with the correct structure
             const payload = {
                 entries: entries,
@@ -184,8 +220,11 @@ export default function AdminCalendar() {
             return updatedEvents;
         });
 
-        // Also remove from draggedEvents
+        // Remove from draggedEvents
         setDraggedEvents(prev => prev.filter(e => e.id !== eventId));
+        
+        // Remove any clash entries for this event
+        setClashEvents(prev => prev.filter(e => e.eventId !== eventId));
     };
 
     // Handle event deletion from calendar directly (for right-click delete, etc.)
@@ -211,13 +250,33 @@ export default function AdminCalendar() {
             if (res.status === "failure") {
                 setClashMessage(res.message);
                 setIsClash(true);
-                return;
+                const clashEntry = {
+                    eventId: currentEvent.id,
+                    title: currentEvent.title,
+                    message: res.message,
+                    start: currentEvent.start,
+                    end: currentEvent.end,
+                    type: "update",
+                    timeSlot: `${currentEvent.start.toLocaleTimeString()} - ${currentEvent.end.toLocaleTimeString()}, ${currentEvent.start.toLocaleDateString("en-US", { weekday: "long" })}`
+                };
+                setClashEvents(prev => {
+                    const existingIndex = prev.findIndex(e => e.eventId === currentEvent.id);
+                    if (existingIndex >= 0) {
+                        return prev.map(e => e.eventId === currentEvent.id ? clashEntry : e);
+                    } else {
+                        return [...prev, clashEntry];
+                    }
+                });
+                alert(`Clash detected for ${currentEvent.title} at ${clashEntry.timeSlot}: ${res.message}`);
+            } else {
+                // No clash
+                setIsClash(false);
+                setClashMessage("");
+                // Remove any existing clash entry for this event
+                setClashEvents(prev => prev.filter(e => e.eventId !== currentEvent.id));
             }
 
-            // No clash
-            setIsClash(false);
-            setClashMessage("");
-
+            // Always allow assignment, even if there is a clash
             const updatedEvent = {
                 ...currentEvent,
                 title: `${currentEvent.title}\n(${selectedLecturer.name}, ${selectedClassroom.room_id})`,
@@ -302,14 +361,14 @@ export default function AdminCalendar() {
             <button
                 className="bg-dark text-white"
                 onClick={hundleSaveAllEvents}
-                disabled={isClash}
+                // Button is always enabled, but visually dimmed if there are clashes
                 style={{
                     position: "absolute",
                     bottom: "10px",
                     right: "20px",
                     zIndex: "1000",
-                    opacity: isClash ? 0.5 : 1,
-                    cursor: isClash ? "not-allowed" : "pointer"
+                    opacity: clashEvents.length > 0 ? 0.5 : 1,
+                    cursor: clashEvents.length > 0 ? "not-allowed" : "pointer"
                 }}
             >
                 Save Timetable
@@ -323,7 +382,26 @@ export default function AdminCalendar() {
                 onEventRemove={handleEventRemove}
                 draggedEvents={draggedEvents}
                 isAdmin={true}
+                onClashDetected={(clash) => {
+                    if (clash.type === "remove") {
+                        // Remove clash entry for this event
+                        setClashEvents(prev => prev.filter(e => e.eventId !== clash.eventId));
+                    } else if (clash.type === "update") {
+                        // Update or add clash entry
+                        setClashEvents(prev => {
+                            const existingIndex = prev.findIndex(e => e.eventId === clash.eventId);
+                            if (existingIndex >= 0) {
+                                // Replace existing clash
+                                return prev.map(e => e.eventId === clash.eventId ? clash : e);
+                            } else {
+                                // Add new clash
+                                return [...prev, clash];
+                            }
+                        });
+                    }
+                }}
             />
+
 
 
             {/* Styled Modal for assigning lecturer and classroom */}
@@ -390,5 +468,6 @@ export default function AdminCalendar() {
             </Modal>
         </div>
     );
+    
 }
 

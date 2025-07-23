@@ -5,6 +5,11 @@ export const login = async(email, password) => {
     return response.data;
 }
 
+export const logout = async() => {
+    const response = await axios.post("/logout", {});
+    return response.data;
+}
+
 export const fetchAdminTimetable = async(program, year) => {
     const response = await axios.get("/timetable", {
         params: {program, year},
@@ -79,7 +84,6 @@ export const saveAdminTimetable = async(payload) => {
 
 
 export const checkClash = async (payload) => {
-    console.log("Sending payload (correct):", { entry: payload });
 
     const response = await axios.post("/clash_detect", {
         entry: payload
