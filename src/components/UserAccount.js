@@ -1,9 +1,11 @@
 // UserAccount.js 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from './AuthContext'; 
 
 const UserAccount = ({ userRole = "admin" }) => {
   const navigate = useNavigate();
+  const { user, logout, switchAccount } = useAuth();
   const [showDropdown, setShowDropdown] = useState(false);
   
   const currentUser = userRole === "admin"
@@ -24,13 +26,15 @@ const UserAccount = ({ userRole = "admin" }) => {
     };
   }, [showDropdown]);
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setShowDropdown(false);
+    await logout();
     navigate('/');
   };
 
-  const handleSwitchAccount = () => {
+  const handleSwitchAccount = async () => {
     setShowDropdown(false);
+    await switchAccount();
     navigate('/');
   };
 
@@ -51,20 +55,20 @@ const UserAccount = ({ userRole = "admin" }) => {
         }}
       >
         <div style={{ flex: 1 }}>
-          <div style={{ fontWeight: 'bold', fontSize: '14px' }}>
-            {currentUser.name}
-          </div>
-          <span style={{
-            fontSize: '10px',
-            color: 'white',
-            backgroundColor: currentUser.role === 'admin' ? '#dc3545' : '#28a745',
-            padding: '2px 6px',
-            borderRadius: '12px',
-            fontWeight: 'bold',
-          }}>
-            {currentUser.role.toUpperCase()}
-          </span>
+        <div style={{ fontWeight: 'bold', fontSize: '14px' }}>
+          {user?.name || "User"}
         </div>
+        <span style={{
+          fontSize: '10px',
+          color: 'white',
+          backgroundColor: user?.role === 'admin' ? '#dc3545' : '#28a745',
+          padding: '2px 6px',
+          borderRadius: '12px',
+          fontWeight: 'bold',
+        }}>
+          {user?.role?.toUpperCase() || userRole?.toUpperCase()}
+        </span>
+      </div>
         <span style={{ fontSize: '12px', color: '#666' }}>▼</span>
       </div>
       

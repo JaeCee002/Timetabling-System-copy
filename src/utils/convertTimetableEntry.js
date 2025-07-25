@@ -27,6 +27,11 @@ export function convertTimetableEntry(entry, referenceMonday = "2025-06-09") {
     daysOfWeek: [offset + 1], // FullCalendar: Monday = 1
     startTime: entry.start_time,
     endTime: entry.end_time,
+    course_id: entry.course_code,
+    program_name: entry.program_name,
+    year: entry.year,
+    lecturer_id: entry.lecturer_id,
+    room_id: entry.room_id,
     extendedProps: {
       lecturer: entry.lecturer_name,
       classroom: entry.room_id,
