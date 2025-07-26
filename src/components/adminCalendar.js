@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import Sidebar from "./sidebar"
+import "./adminCalendar.css";
 import MyCalendar from "./myCalendar"
 import { v4 as uuidv4 } from 'uuid';
 import { Modal, Button } from "react-bootstrap";
+import { ToastContainer, Toast } from "react-bootstrap";
 import UserAccount from "./UserAccount";
 import { fetchAdminTimetable, fetchLecturers, fetchClassrooms, checkClash } from "../api/timetableAPI";
 import { convertTimetableEntry } from "../utils/convertTimetableEntry";
@@ -11,11 +13,12 @@ import { saveAdminTimetable } from "../api/timetableAPI";
 import { useCalendarStore } from "./calendarStore";
 import { useAuth } from "./AuthContext";
 
-
+import "./adminCalendar.css";
 
 export default function AdminCalendar() {
     const calendarApi = useCalendarStore(state => state.calendarApi);
     const { isAuthenticated } = useAuth();
+    
     // const calendarRef = useRef();
 
 
@@ -36,7 +39,10 @@ export default function AdminCalendar() {
     const [isClash, setIsClash] = useState(false);
     const [clashMessage, setClashMessage] = useState("");
     const [clashEvents, setClashEvents] = useState([]);
-
+    // Replace your current state with these two states
+const [persistentConflicts, setPersistentConflicts] = useState([]); //All conflicts (persistent)
+const [visibleNotifications, setVisibleNotifications] = useState([]); //Temporary notifications
+const [highlightedEvents, setHighlightedEvents] = useState([]);
 
 
     useEffect(() => {
@@ -70,11 +76,13 @@ export default function AdminCalendar() {
             .catch(err => console.error("Admin timetable fetch error:", err));
     }, [program, year]);
 
+    
+
     // Handle adding a new event
     const handleEventAdd = (event) => {
         const eventWithId = {
             ...event,
-            id: uuidv4() // Add a unique ID to the event
+            id: uuidv4() // Adding a unique ID to the event
         };
         setCurrentEvent(eventWithId);
         setShowModal(true);
@@ -82,34 +90,70 @@ export default function AdminCalendar() {
 
     // Handle updating an existing event (when moved/resized)
     const handleEventUpdate = async (updatedEvent) => {
-        if (!selectedLecturer || !selectedClassroom || !currentEvent) return;
+    if (!selectedLecturer || !selectedClassroom || !currentEvent) return;
 
-        const payload = {
-            lecturer_id: selectedLecturer.user_id,
-            room_id: selectedClassroom.room_id,
-            day_of_week: currentEvent.start.toLocaleDateString("en-US", { weekday: "long" }),
-            start_time: currentEvent.start.toTimeString().slice(0, 8),
-            end_time: currentEvent.end.toTimeString().slice(0, 8)
-        };
+    const payload = {
+        lecturer_id: selectedLecturer.user_id,
+        room_id: selectedClassroom.room_id,
+        day_of_week: currentEvent.start.toLocaleDateString("en-US", { weekday: "long" }),
+        start_time: currentEvent.start.toTimeString().slice(0, 8),
+        end_time: currentEvent.end.toTimeString().slice(0, 8)
+    };
 
+    try {
         const res = await checkClash(payload);
 
         if (res.status === "failure") {
-                setClashMessage(res.message);
-                setIsClash(true);
-                setClashEvents(prev => [...prev, clashEvents]);
-                alert(`Clash detected for ${currentEvent.title}: ${res.message}`);
-            }
+            setClashMessage(res.message);
+            setIsClash(true);
+            
+            // Create proper clash entry
+            const clashEntry = {
+                eventId: currentEvent.id,
+                title: currentEvent.title,
+                message: res.message,
+                start: currentEvent.start,
+                end: currentEvent.end,
+                type: "drag",
+                timeSlot: `${currentEvent.start.toLocaleTimeString()} - ${currentEvent.end.toLocaleTimeString()}`
+            };
 
-            // No clash
+            // Update all conflict states
+            setPersistentConflicts(prev => [...prev.filter(c => c.eventId !== currentEvent.id), clashEntry]);
+            setVisibleNotifications(prev => [...prev, clashEntry]);
+            setClashEvents(prev => [...prev.filter(c => c.eventId !== currentEvent.id), clashEntry]);
+            
+            // Highlight the dragged event
+            if (calendarApi) {
+                const eventObj = calendarApi.getEventById(currentEvent.id);
+                if (eventObj) {
+                    eventObj.setProp('backgroundColor', '#fff3cd');
+                    eventObj.setProp('borderColor', '#ffc107');
+                }
+            }
+        } else {
+            // No clash - clear any existing conflict for this event
             setIsClash(false);
             setClashMessage("");
-        
+            setPersistentConflicts(prev => prev.filter(c => c.eventId !== currentEvent.id));
+            setClashEvents(prev => prev.filter(c => c.eventId !== currentEvent.id));
+            
+            // Remove highlight if exists
+            if (calendarApi) {
+                const eventObj = calendarApi.getEventById(currentEvent.id);
+                if (eventObj) {
+                    eventObj.setProp('classNames', '');
+                    eventObj.setProp('backgroundColor', '');
+                    eventObj.setProp('borderColor', '');
+                }
+            }
+        }
+
+        // Rest of your existing update logic
         setEvents(prev => prev.map(e =>
             e.id === updatedEvent.id ? updatedEvent : e
         ));
 
-        // Also update in draggedEvents if it exists there
         setDraggedEvents(prev => prev.map(e =>
             e.id === updatedEvent.id ? {
                 ...updatedEvent,
@@ -117,7 +161,16 @@ export default function AdminCalendar() {
                 displayTitle: updatedEvent.extendedProps?.originalTitle || updatedEvent.title.split('\n')[0]
             } : e
         ));
-    };
+    } catch (err) {
+        console.error("Error checking clash:", err);
+        setVisibleNotifications(prev => [...prev, {
+            eventId: currentEvent.id,
+            title: currentEvent.title,
+            message: "Failed to check for conflicts",
+            type: "error"
+        }]);
+    }
+};
 
     //handle saving all events
 
@@ -208,24 +261,18 @@ export default function AdminCalendar() {
 
     //Handle deleting an event
     const handleEventDelete = (eventId) => {
-        // Store current positions of all events before deletion
-        setEvents(prev => {
-            const eventToDelete = prev.find(e => e.id === eventId);
-            if (!eventToDelete) return prev;
+    // Remove from events state
+    setEvents(prev => prev.filter(e => e.id !== eventId));
+    
+    // Remove from draggedEvents
+    setDraggedEvents(prev => prev.filter(e => e.id !== eventId));
+    
+    // Remove from both conflict states
+    setPersistentConflicts(prev => prev.filter(c => c.eventId !== eventId));
+    setVisibleNotifications(prev => prev.filter(c => c.eventId !== eventId));
+};
 
-            // Filter out the deleted event while maintaining array structure
-            const updatedEvents = prev.filter(e => e.id !== eventId);
-
-            // Return the updated array
-            return updatedEvents;
-        });
-
-        // Remove from draggedEvents
-        setDraggedEvents(prev => prev.filter(e => e.id !== eventId));
-        
-        // Remove any clash entries for this event
-        setClashEvents(prev => prev.filter(e => e.eventId !== eventId));
-    };
+   
 
     // Handle event deletion from calendar directly (for right-click delete, etc.)
     const handleEventRemove = (eventId) => {
@@ -234,93 +281,94 @@ export default function AdminCalendar() {
 
     // Handle modal submission
     const handleModalSubmit = async () => {
-        if (!selectedLecturer || !selectedClassroom || !currentEvent) return;
+    if (!selectedLecturer || !selectedClassroom || !currentEvent) return;
 
-        const payload = {
-            lecturer_id: selectedLecturer.user_id,
-            room_id: selectedClassroom.room_id,
-            day_of_week: currentEvent.start.toLocaleDateString("en-US", { weekday: "long" }),
-            start_time: currentEvent.start.toTimeString().slice(0, 8),
-            end_time: currentEvent.end.toTimeString().slice(0, 8)
+    const payload = {
+        lecturer_id: selectedLecturer.user_id,
+        room_id: selectedClassroom.room_id,
+        day_of_week: currentEvent.start.toLocaleDateString("en-US", { weekday: "long" }),
+        start_time: currentEvent.start.toTimeString().slice(0, 8),
+        end_time: currentEvent.end.toTimeString().slice(0, 8)
+    };
+
+    try {
+        const res = await checkClash(payload);
+
+        if (res.status === "failure") {
+            setClashMessage(res.message);
+            setIsClash(true);
+            const clashEntry = {
+                eventId: currentEvent.id,
+                title: currentEvent.title,
+                message: res.message,
+                start: currentEvent.start,
+                end: currentEvent.end,
+                type: "update",
+                timeSlot: `${currentEvent.start.toLocaleTimeString()} - ${currentEvent.end.toLocaleTimeString()}, ${currentEvent.start.toLocaleDateString("en-US", { weekday: "long" })}`
+            };
+            setPersistentConflicts(prev => [...prev.filter(c => c.eventId !== currentEvent.id), clashEntry]);
+            setVisibleNotifications(prev => [...prev, clashEntry]);
+            setClashEvents(prev => {
+                const existingIndex = prev.findIndex(e => e.eventId === currentEvent.id);
+                if (existingIndex >= 0) {
+                    return prev.map(e => e.eventId === currentEvent.id ? clashEntry : e);
+                }
+                return [...prev, clashEntry];
+            });
+        } else {
+            // No clash
+            setIsClash(false);
+            setClashMessage("");
+            // Remove any existing clash entry for this event
+            setPersistentConflicts(prev => prev.filter(c => c.eventId !== currentEvent.id));
+            setVisibleNotifications(prev => prev.filter(c => c.eventId !== currentEvent.id));
+            setClashEvents(prev => prev.filter(e => e.eventId !== currentEvent.id));
+        }
+
+        // Always allow assignment, even if there is a clash
+        const updatedEvent = {
+            ...currentEvent,
+            title: `${currentEvent.title}\n(${selectedLecturer.name}, ${selectedClassroom.room_id})`,
+            extendedProps: {
+                ...currentEvent.extendedProps,
+                lecturer: selectedLecturer.name,
+                lecturer_id: selectedLecturer.user_id,
+                classroom: selectedClassroom.room_id,
+                course_id: currentEvent.title,
+                originalTitle: currentEvent.title
+            }
         };
 
-        try {
-            const res = await checkClash(payload);
+        const existingEventIndex = events.findIndex(e => e.id === updatedEvent.id);
+        if (existingEventIndex >= 0) {
+            setEvents(prev => prev.map(e => e.id === updatedEvent.id ? { ...e, title: updatedEvent.title, extendedProps: updatedEvent.extendedProps } : e));
+        } else {
+            setEvents(prev => [...prev, updatedEvent]);
+        }
 
-            if (res.status === "failure") {
-                setClashMessage(res.message);
-                setIsClash(true);
-                const clashEntry = {
-                    eventId: currentEvent.id,
-                    title: currentEvent.title,
-                    message: res.message,
-                    start: currentEvent.start,
-                    end: currentEvent.end,
-                    type: "update",
-                    timeSlot: `${currentEvent.start.toLocaleTimeString()} - ${currentEvent.end.toLocaleTimeString()}, ${currentEvent.start.toLocaleDateString("en-US", { weekday: "long" })}`
-                };
-                setClashEvents(prev => {
-                    const existingIndex = prev.findIndex(e => e.eventId === currentEvent.id);
-                    if (existingIndex >= 0) {
-                        return prev.map(e => e.eventId === currentEvent.id ? clashEntry : e);
-                    } else {
-                        return [...prev, clashEntry];
-                    }
-                });
-                alert(`Clash detected for ${currentEvent.title} at ${clashEntry.timeSlot}: ${res.message}`);
-            } else {
-                // No clash
-                setIsClash(false);
-                setClashMessage("");
-                // Remove any existing clash entry for this event
-                setClashEvents(prev => prev.filter(e => e.eventId !== currentEvent.id));
-            }
-
-            // Always allow assignment, even if there is a clash
-            const updatedEvent = {
-                ...currentEvent,
-                title: `${currentEvent.title}\n(${selectedLecturer.name}, ${selectedClassroom.room_id})`,
-                extendedProps: {
-                    ...currentEvent.extendedProps,
-                    lecturer: selectedLecturer.name,
-                    lecturer_id: selectedLecturer.user_id,
-                    classroom: selectedClassroom.room_id,
-                    course_id: currentEvent.title,
-                    originalTitle: currentEvent.title
-                }
+        setDraggedEvents(prev => {
+            const existingIndex = prev.findIndex(e => e.id === updatedEvent.id);
+            const draggedEventVersion = {
+                ...updatedEvent,
+                title: currentEvent.title,
+                displayTitle: currentEvent.title
             };
 
-            const existingEventIndex = events.findIndex(e => e.id === updatedEvent.id);
-            if (existingEventIndex >= 0) {
-                setEvents(prev => prev.map(e => e.id === updatedEvent.id ? { ...e, title: updatedEvent.title, extendedProps: updatedEvent.extendedProps } : e));
-            } else {
-                setEvents(prev => [...prev, updatedEvent]);
+            if (existingIndex >= 0) {
+                return prev.map(e => e.id === updatedEvent.id ? { ...e, title: currentEvent.title, displayTitle: currentEvent.title, extendedProps: updatedEvent.extendedProps } : e);
             }
+            return [...prev, draggedEventVersion];
+        });
 
-            setDraggedEvents(prev => {
-                const existingIndex = prev.findIndex(e => e.id === updatedEvent.id);
-                const draggedEventVersion = {
-                    ...updatedEvent,
-                    title: currentEvent.title,
-                    displayTitle: currentEvent.title
-                };
-
-                if (existingIndex >= 0) {
-                    return prev.map(e => e.id === updatedEvent.id ? { ...e, title: currentEvent.title, displayTitle: currentEvent.title, extendedProps: updatedEvent.extendedProps } : e);
-                } else {
-                    return [...prev, draggedEventVersion];
-                }
-            });
-
-            setSelectedLecturer("");
-            setSelectedClassroom("");
-            setShowModal(false);
-        } catch (err) {
-            console.error("Clash check failed:", err);
-            setClashMessage("Failed to verify clash. Please try again.");
-            setIsClash(true);
-        }
-    };
+        setSelectedLecturer("");
+        setSelectedClassroom("");
+        setShowModal(false);
+    } catch (err) {
+        console.error("Clash check failed:", err);
+        setClashMessage("Failed to verify clash. Please try again.");
+        setIsClash(true);
+    }
+};
 
     // Reset modal state on close
     const handleModalClose = () => {
@@ -332,8 +380,62 @@ export default function AdminCalendar() {
         setCurrentEvent(null);
     };
 
+
+
+const toggleConflictHighlight = () => {
+  if (highlightedEvents.length > 0) {
+    // Clear highlights
+    setHighlightedEvents([]);
+    if (calendarApi) {
+      calendarApi.getEvents().forEach(event => {
+        event.setProp('classNames', '');
+        event.setProp('backgroundColor', '');
+        event.setProp('borderColor', '');
+      });
+    }
+  } else {
+    // Highlight conflicts from persistent state
+    setHighlightedEvents(persistentConflicts.map(c => c.eventId));
+    
+    if (calendarApi) {
+      calendarApi.getEvents().forEach(event => {
+        if (persistentConflicts.some(c => c.eventId === event.id)) {
+          event.setProp('classNames', 'conflict-glow');
+          event.setProp('backgroundColor', '#fff3cd');
+          event.setProp('borderColor', '#ffc107');
+        }
+      });
+    }
+  }
+};
+
+
     return (
         <div className="Container" style={{ display: "flex" }}>
+             <ToastContainer position="top-end" className="p-3" style={{zIndex: 9999}} >
+                {visibleNotifications.map((clash, index) => (
+                    <Toast
+                        key={index}
+                        onClose={() => setVisibleNotifications(prev => prev.filter((_, i) => i !== index))}
+                        bg="danger"
+                        autohide
+                        delay={5000}
+                        className={clash.type === "conflict" ? "conflict-notification": ""}
+                        >
+                            <Toast.Header>
+                                <strong className="me-auto">Schedule Conflict</strong>
+                            </Toast.Header>
+                            <Toast.Body className="text-white">
+                                <strong>{clash.title}</strong>:{clash.message}
+                                <div className="small">{clash.timeSlot}</div>
+                            </Toast.Body>
+                        </Toast>
+                ))}
+            </ToastContainer>
+
+
+
+
 
             {/* Add this header */}
             <div style={{
@@ -358,21 +460,30 @@ export default function AdminCalendar() {
                 }}
             />
             {/*Adding a save button*/}
-            <button
-                className="bg-dark text-white"
+            <div style={{
+                position: "absolute",
+                bottom: "10px",
+                right: "120px", // Adjust as needed
+                zIndex: "1000",
+                display: "flex",
+                        gap: "10px"
+            }}>
+           <Button 
+            variant={persistentConflicts.length ? "warning" : "outline-warning"}
+            onClick={toggleConflictHighlight}
+            className={`conflict-btn ${persistentConflicts.length ? 'has-conflicts' : ''}`}
+        >
+            {persistentConflicts.length ? `⚠️ Conflicts (${persistentConflicts.length}) ⚠️` : "Show Conflicts"}
+        </Button>
+            
+            <Button
+                variant="success"
                 onClick={hundleSaveAllEvents}
-                // Button is always enabled, but visually dimmed if there are clashes
-                style={{
-                    position: "absolute",
-                    bottom: "10px",
-                    right: "20px",
-                    zIndex: "1000",
-                    opacity: clashEvents.length > 0 ? 0.5 : 1,
-                    cursor: clashEvents.length > 0 ? "not-allowed" : "pointer"
-                }}
+                disabled={clashEvents.length > 0}
             >
                 Save Timetable
-            </button>
+            </Button>
+            </div>
 
             <MyCalendar
                 events={events}

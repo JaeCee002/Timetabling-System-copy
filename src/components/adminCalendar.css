@@ -1,0 +1,51 @@
+/* Add glowing effect for conflicted events */
+/* Updated glow animation to match button pulse */
+.conflict-glow {
+    animation: conflict-pulse 2s infinite ease-in-out;
+    box-shadow: 0 0 0 rgba(255, 193, 7, 0);
+}
+
+@keyframes conflict-pulse {
+    0% {
+        box-shadow: 0 0 0 rgba(255, 193, 7, 0);
+        background-color: #fff3cd;
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 0 15px rgba(255, 193, 7, 0.7);
+        background-color: #ffe69c;
+        transform: scale(1.02);
+    }
+    100% {
+        box-shadow: 0 0 0 rgba(255, 193, 7, 0);
+        background-color: #fff3cd;
+        transform: scale(1);
+    }
+}
+
+.conflict-btn {
+    transition: all 0.3s ease;
+}
+
+.conflict-btn.has-conflicts {
+    animation: btn-pulse 2s infinite;
+    font-weight: bold;
+}
+
+@keyframes btn-pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.conflict-notification {
+    animation: shake 0.5s cubic-bezier(.36,.07,.19,.97) both;
+    border-left: 5px solid #ffc107;
+}
+
+@keyframes shake {
+    10%, 90% { transform: translateX(-1px); }
+    20%, 80% { transform: translateX(2px); }
+    30%, 50%, 70% { transform: translateX(-3px); }
+    40%, 60% { transform: translateX(3px); }
+}
