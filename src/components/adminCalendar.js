@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Modal, Button } from "react-bootstrap";
 import { ToastContainer, Toast } from "react-bootstrap";
 import UserAccount from "./UserAccount";
-import { fetchAdminTimetable, fetchLecturers, fetchClassrooms, checkClash } from "../api/timetableAPI";
+import { fetchAdminTimetable, fetchLecturers, fetchClassrooms, checkClash, lockClass, releaseClass } from "../api/timetableAPI";
 import { convertTimetableEntry } from "../utils/convertTimetableEntry";
 import { saveAdminTimetable } from "../api/timetableAPI";
 import { useCalendarStore } from "./calendarStore";
@@ -18,6 +18,39 @@ import "./adminCalendar.css";
 export default function AdminCalendar() {
     const calendarApi = useCalendarStore(state => state.calendarApi);
     const { isAuthenticated } = useAuth();
+
+    // Lock state for class
+    const [isClassLocked, setIsClassLocked] = useState(false);
+    const [lockLoading, setLockLoading] = useState(false);
+
+    // Lock/Unlock class handler
+    const handleLockToggle = async () => {
+        setLockLoading(true);
+        try {
+            let res;
+            if (!isClassLocked) {
+                // Lock class (no parameters needed)
+                res = await lockClass();
+                if (res && res.status === "success") {
+                    setIsClassLocked(true);
+                } else {
+                    alert("Failed to lock class. Server did not return success.");
+                }
+            } else {
+                // Release class (no parameters needed)
+                res = await releaseClass();
+                if (res && res.status === "success") {
+                    setIsClassLocked(false);
+                } else {
+                    alert("Failed to unlock class. Server did not return success.");
+                }
+            }
+        } catch (err) {
+            alert("Failed to " + (isClassLocked ? "unlock" : "lock") + " class. See console for details.");
+            console.error("Lock/Unlock error:", err);
+        }
+        setLockLoading(false);
+    };
     
     // const calendarRef = useRef();
 
@@ -422,6 +455,23 @@ const toggleConflictHighlight = () => {
 
     return (
         <div className="Container" style={{ display: "flex" }}>
+            {/* Lock/Unlock Class Button */}
+            <div style={{
+                position: "absolute",
+                top: "60px",
+                right: "20px",
+                zIndex: 1000,
+            }}>
+                <Button
+                    variant={isClassLocked ? "danger" : "primary"}
+                    onClick={handleLockToggle}
+                    //disabled={lockLoading || !program || !year}
+                >
+                    {lockLoading
+                        ? (isClassLocked ? "Unlocking..." : "Locking...")
+                        : (isClassLocked ? "Unlock Class" : "Lock Class")}
+                </Button>
+            </div>
              <ToastContainer position="top-end" className="p-3" style={{zIndex: 9999}} >
                 {visibleNotifications.map((clash, index) => (
                     <Toast
