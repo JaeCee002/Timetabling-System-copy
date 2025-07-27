@@ -312,6 +312,7 @@ return (
             }
 
             const payload = {
+              id: info.event.id,
               lecturer_id: lecturer_id,
               room_id: classroom,
               day_of_week: start.toLocaleDateString("en-US", { weekday: "long" }),
