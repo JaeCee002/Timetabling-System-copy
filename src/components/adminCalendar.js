@@ -535,13 +535,26 @@ export default function AdminCalendar() {
             {/* Lock/Unlock Class Button */}
             <div style={{
                 position: "absolute",
-                top: "60px",
-                right: "20px",
+                bottom: "60px",
+                left: "30px",
                 zIndex: 1000,
                 display: "flex",
                 gap: "10px"
             }}>
-                <Button
+                <i class= "bi bi-lock-fill lock-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Secure"
+
+                      variant={isClassLocked ? "danger" : "primary"}
+                      onClick={handleLockToggle}
+                      disabled={lockLoading || !program || !year}
+                >
+                {lockLoading
+                        ? (isClassLocked ? "Unlocking..." : "Locking...")
+                        : (isClassLocked ? "Unlock Class" : "Lock Class")}
+                
+                </i>
+
+                {/* <Button
+                
                     variant={isClassLocked ? "danger" : "primary"}
                     onClick={handleLockToggle}
                 >
@@ -550,17 +563,20 @@ export default function AdminCalendar() {
                         : (isClassLocked ? "Unlock Class" : "Lock Class")}
                 </Button>
                 {/* Clear Timetable Button */}
-                <Button
-                    variant="outline-secondary"
-                    onClick={() => {
-                        setEvents([]);
-                        setDraggedEvents([]);
-                        setCurrentEvent(null);
-                    }}
-                    disabled={events.length === 0}
-                >
-                    Clear Timetable
-                </Button>
+//                 <Button
+//                     variant="outline-secondary"
+//                     onClick={() => {
+//                         setEvents([]);
+//                         setDraggedEvents([]);
+//                         setCurrentEvent(null);
+//                     }}
+//                     disabled={events.length === 0}
+//                 >
+//                     Clear Timetable
+//                 </Button>
+
+//                 </Button> */}
+
             </div>
             <ToastContainer position="top-end" className="p-3" style={{ zIndex: 9999 }} >
                 {visibleNotifications.map((clash, index) => (

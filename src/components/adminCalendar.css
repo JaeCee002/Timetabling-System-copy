@@ -49,3 +49,34 @@
     30%, 50%, 70% { transform: translateX(-3px); }
     40%, 60% { transform: translateX(3px); }
 }
+
+.lock-icon-wrapper {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      background: linear-gradient(135deg, #f0f4f8, #d9e2ec);
+    }
+
+    .lock-icon {
+      font-size: 1rem;
+      color: #0d6efd;
+      background-color: rgb(51, 51, 51);
+      padding: 20px;
+      border-radius: 50%;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      animation: pulse 2s infinite;
+      cursor: pointer;
+    }
+
+    .lock-icon:hover {
+      transform: scale(1.1);
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
