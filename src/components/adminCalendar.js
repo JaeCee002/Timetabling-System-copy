@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Modal, Button } from "react-bootstrap";
 import { ToastContainer, Toast } from "react-bootstrap";
 import UserAccount from "./UserAccount";
-import { fetchAdminTimetable, fetchLecturers, fetchClassrooms, checkClash } from "../api/timetableAPI";
+import { fetchAdminTimetable, fetchLecturers, fetchClassrooms, checkClash, lockClass, releaseClass } from "../api/timetableAPI";
 import { convertTimetableEntry } from "../utils/convertTimetableEntry";
 import { saveAdminTimetable } from "../api/timetableAPI";
 import { useCalendarStore } from "./calendarStore";
@@ -18,6 +18,39 @@ import "./adminCalendar.css";
 export default function AdminCalendar() {
     const calendarApi = useCalendarStore(state => state.calendarApi);
     const { isAuthenticated } = useAuth();
+
+    // Lock state for class
+    const [isClassLocked, setIsClassLocked] = useState(false);
+    const [lockLoading, setLockLoading] = useState(false);
+
+    // Lock/Unlock class handler
+    const handleLockToggle = async () => {
+        setLockLoading(true);
+        try {
+            let res;
+            if (!isClassLocked) {
+                // Lock class (no parameters needed)
+                res = await lockClass();
+                if (res && res.status === "success") {
+                    setIsClassLocked(true);
+                } else {
+                    alert("Failed to lock class. Server did not return success.");
+                }
+            } else {
+                // Release class (no parameters needed)
+                res = await releaseClass();
+                if (res && res.status === "success") {
+                    setIsClassLocked(false);
+                } else {
+                    alert("Failed to unlock class. Server did not return success.");
+                }
+            }
+        } catch (err) {
+            alert("Failed to " + (isClassLocked ? "unlock" : "lock") + " class. See console for details.");
+            console.error("Lock/Unlock error:", err);
+        }
+        setLockLoading(false);
+    };
     
     // const calendarRef = useRef();
 
@@ -40,9 +73,9 @@ export default function AdminCalendar() {
     const [clashMessage, setClashMessage] = useState("");
     const [clashEvents, setClashEvents] = useState([]);
     // Replace your current state with these two states
-const [persistentConflicts, setPersistentConflicts] = useState([]); //All conflicts (persistent)
-const [visibleNotifications, setVisibleNotifications] = useState([]); //Temporary notifications
-const [highlightedEvents, setHighlightedEvents] = useState([]);
+    const [persistentConflicts, setPersistentConflicts] = useState([]); //All conflicts (persistent)
+    const [visibleNotifications, setVisibleNotifications] = useState([]); //Temporary notifications
+    const [highlightedEvents, setHighlightedEvents] = useState([]);
 
 
     useEffect(() => {
@@ -66,6 +99,8 @@ const [highlightedEvents, setHighlightedEvents] = useState([]);
     useEffect(() => {
         if (!program || !year) return;
 
+        setEvents([]); // Clear previous entries before fetching
+
         fetchAdminTimetable(program, year)
             .then((data) => {
                 const formatted = data.entries
@@ -73,7 +108,10 @@ const [highlightedEvents, setHighlightedEvents] = useState([]);
                     .filter(e => e !== null);
                 setEvents(formatted);
             })
-            .catch(err => console.error("Admin timetable fetch error:", err));
+            .catch(err => {
+                console.error("Admin timetable fetch error:", err);
+                // Optionally, show an error notification here
+            });
     }, [program, year]);
 
     
@@ -93,6 +131,7 @@ const [highlightedEvents, setHighlightedEvents] = useState([]);
     if (!selectedLecturer || !selectedClassroom || !currentEvent) return;
 
     const payload = {
+        id: currentEvent.id,
         lecturer_id: selectedLecturer.user_id,
         room_id: selectedClassroom.room_id,
         day_of_week: currentEvent.start.toLocaleDateString("en-US", { weekday: "long" }),
@@ -106,7 +145,6 @@ const [highlightedEvents, setHighlightedEvents] = useState([]);
         if (res.status === "failure") {
             setClashMessage(res.message);
             setIsClash(true);
-            
             // Create proper clash entry
             const clashEntry = {
                 eventId: currentEvent.id,
@@ -119,10 +157,13 @@ const [highlightedEvents, setHighlightedEvents] = useState([]);
             };
 
             // Update all conflict states
-            setPersistentConflicts(prev => [...prev.filter(c => c.eventId !== currentEvent.id), clashEntry]);
-            setVisibleNotifications(prev => [...prev, clashEntry]);
+            setPersistentConflicts(prev => {
+                const filtered = prev.filter(c => c.eventId !== currentEvent.id);
+                return [...filtered, clashEntry];
+            });
             setClashEvents(prev => [...prev.filter(c => c.eventId !== currentEvent.id), clashEntry]);
-            
+            setVisibleNotifications(prev => [...prev, clashEntry]); // <-- Show toast notification for eventDrop
+
             // Highlight the dragged event
             if (calendarApi) {
                 const eventObj = calendarApi.getEventById(currentEvent.id);
@@ -201,6 +242,7 @@ const [highlightedEvents, setHighlightedEvents] = useState([]);
                 const roomId = e.extendedProps?.classroom;
 
                 return {
+                    id: e.id, // Send unique event id to backend
                     course_id: courseId,
                     program_name: program,
                     year: parseInt(year),
@@ -284,6 +326,7 @@ const [highlightedEvents, setHighlightedEvents] = useState([]);
     if (!selectedLecturer || !selectedClassroom || !currentEvent) return;
 
     const payload = {
+        id: currentEvent.id,
         lecturer_id: selectedLecturer.user_id,
         room_id: selectedClassroom.room_id,
         day_of_week: currentEvent.start.toLocaleDateString("en-US", { weekday: "long" }),
@@ -412,6 +455,23 @@ const toggleConflictHighlight = () => {
 
     return (
         <div className="Container" style={{ display: "flex" }}>
+            {/* Lock/Unlock Class Button */}
+            <div style={{
+                position: "absolute",
+                top: "60px",
+                right: "20px",
+                zIndex: 1000,
+            }}>
+                <Button
+                    variant={isClassLocked ? "danger" : "primary"}
+                    onClick={handleLockToggle}
+                    //disabled={lockLoading || !program || !year}
+                >
+                    {lockLoading
+                        ? (isClassLocked ? "Unlocking..." : "Locking...")
+                        : (isClassLocked ? "Unlock Class" : "Lock Class")}
+                </Button>
+            </div>
              <ToastContainer position="top-end" className="p-3" style={{zIndex: 9999}} >
                 {visibleNotifications.map((clash, index) => (
                     <Toast
@@ -453,6 +513,7 @@ const toggleConflictHighlight = () => {
                     console.log("Program selection:", { id, name });
                     setProgramId(id);
                     setProgram(name);
+                    setYear(null);
                 }}
                 onYearSelect={(year) => {
                     console.log("Year selection:", year);
@@ -497,15 +558,22 @@ const toggleConflictHighlight = () => {
                     if (clash.type === "remove") {
                         // Remove clash entry for this event
                         setClashEvents(prev => prev.filter(e => e.eventId !== clash.eventId));
+                        setPersistentConflicts(prev => prev.filter(e => e.eventId !== clash.eventId)); // <-- Clear persistentConflicts too
                     } else if (clash.type === "update") {
                         // Update or add clash entry
                         setClashEvents(prev => {
                             const existingIndex = prev.findIndex(e => e.eventId === clash.eventId);
                             if (existingIndex >= 0) {
-                                // Replace existing clash
                                 return prev.map(e => e.eventId === clash.eventId ? clash : e);
                             } else {
-                                // Add new clash
+                                return [...prev, clash];
+                            }
+                        });
+                        setPersistentConflicts(prev => {
+                            const existingIndex = prev.findIndex(e => e.eventId === clash.eventId);
+                            if (existingIndex >= 0) {
+                                return prev.map(e => e.eventId === clash.eventId ? clash : e);
+                            } else {
                                 return [...prev, clash];
                             }
                         });

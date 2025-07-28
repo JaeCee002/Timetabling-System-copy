@@ -20,7 +20,8 @@ export function convertTimetableEntry(entry, referenceMonday = "2025-06-09") {
   };
 
   return {
-    id: entry.table_id,
+    tableId: entry.table_id,
+    id:entry.event_id,
     title: `${entry.course_code} (${entry.lecturer_name}, ${entry.room_id})`,
     start: formatDateTime(baseDate, entry.start_time),
     end: formatDateTime(baseDate, entry.end_time),

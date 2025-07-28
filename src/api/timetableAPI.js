@@ -91,7 +91,21 @@ export const checkClash = async (payload) => {
     return response.data;
 };
 
+export const lockClass = async () => {
 
+    const response = await axios.get("/timetable/lock", {
+        params: {},
+    });
+    return response.data;
+};
+
+export const releaseClass = async () => {
+
+    const response = await axios.get("/timetable/release", {
+        params: {},
+    });
+    return response.data;
+};
 
 
 //  export const saveAdminTimetable = async (payload) => {
