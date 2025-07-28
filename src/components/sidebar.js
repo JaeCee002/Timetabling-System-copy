@@ -48,7 +48,14 @@ const Sidebar = ({ onSchoolSelect, onProgramSelect, onYearSelect }) => {
     if (!university || !isAuthenticated) return;
 
     fetchSchools(university)
-      .then(data => setSchools(data.schools))
+      .then(data => {
+        // If API returns a single school as a string
+        if (typeof data.schools === 'string') {
+          setSchools([{ school_id: 1, school_name: data.schools }]);
+        } else {
+          // setSchools(data.schools); // Old code for multiple schools
+        }
+      })
       .catch(err => console.error("School fetch error:", err));
   }, []);
 
@@ -115,11 +122,55 @@ const Sidebar = ({ onSchoolSelect, onProgramSelect, onYearSelect }) => {
     <div className="sidebar" ref={sidebarRef}>
       <h2>School and Program</h2>
 
-      <select id="schoolSelect" value={selectedSchool} onChange={handleSchoolChange}>
+      <select
+        id="schoolSelect"
+        value={selectedSchool}
+        onChange={handleSchoolChange}
+        style={{
+          maxWidth: '100%',
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          whiteSpace: 'nowrap',
+          display: 'block'
+        }}
+      >
         <option value="">Select School</option>
-        {schools.map((school, i) => (
-          <option key={i} value={school.school_id}>{school.school_name}</option>
-        ))}
+        {schools.length === 1 ? (
+          <option
+            value={schools[0].school_id}
+            style={{
+              maxWidth: '100%',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              display: 'block'
+            }}
+            title={schools[0].school_name}
+          >
+            {schools[0].school_name.length > 30
+              ? schools[0].school_name.slice(0, 30) + '...'
+              : schools[0].school_name}
+          </option>
+        ) : (
+          schools.map((school, i) => (
+            <option
+              key={i}
+              value={school.school_id}
+              style={{
+                maxWidth: '100%',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis',
+                whiteSpace: 'nowrap',
+                display: 'block'
+              }}
+              title={school.school_name}
+            >
+              {school.school_name.length > 30
+                ? school.school_name.slice(0, 30) + '...'
+                : school.school_name}
+            </option>
+          ))
+        )}
       </select>
 
       <select id="programSelect" value={selectedProgram} onChange={handleProgramChange} disabled={!selectedSchool}>

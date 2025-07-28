@@ -33,14 +33,16 @@ useEffect(() => {
 }, [setCalendarApi]);
 
 useEffect(() => {
-  fetchLecturers()
-    .then((data) => setLecturers(data.lecturers))
-    .catch(err => console.error("Lecturer fetch error:", err));
+  if (isAdmin) {
+    fetchLecturers()
+      .then((data) => setLecturers(data.lecturers))
+      .catch(err => console.error("Lecturer fetch error:", err));
 
-  fetchClassrooms()
-    .then((data) => setClassrooms(data.classes))
-    .catch(err => console.error("Classroom fetch error:", err));
-}, []);
+    fetchClassrooms()
+      .then((data) => setClassrooms(data.classes))
+      .catch(err => console.error("Classroom fetch error:", err));
+  }
+}, [isAdmin]);
 
 
 useEffect(() => {

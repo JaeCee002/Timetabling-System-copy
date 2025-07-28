@@ -160,8 +160,12 @@ const AdminDashboard = () => {
     updatePendingUser(userId, role)
       .then((res) => {
         if (res.status !== 'success') throw new Error("Failed to set role");
-        // Remove user from pending list after update
-        setPendingUsers((prev) => prev.filter((u) => u.id !== userId));
+        fetchPendingUsers()
+          .then((data) => {
+            const formatted = data.users;
+            setPendingUsers(formatted);
+          })
+          .catch((err) => console.error("Failed to fetch pending users:", err));
       })
       .catch((err) => {
         console.error("Role set error:", err);

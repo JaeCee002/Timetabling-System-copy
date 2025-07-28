@@ -10,8 +10,11 @@ const ProtectedRoute = ({ children, requiredRole = null }) => {
     return <Navigate to="/" replace />;
   }
 
-  if (requiredRole && user?.role !== requiredRole) {
-    return <Navigate to={user?.role === 'admin' ? '/adminCalendar' : '/userCalendar'} replace />;
+  if (requiredRole) {
+    const allowedRoles = Array.isArray(requiredRole) ? requiredRole : [requiredRole];
+    if (!allowedRoles.includes(user?.role)) {
+      return <Navigate to={user?.role === 'admin' ? '/adminCalendar' : '/userCalendar'} replace />;
+    }
   }
 
   return children;

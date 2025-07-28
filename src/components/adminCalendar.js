@@ -7,7 +7,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { Modal, Button } from "react-bootstrap";
 import { ToastContainer, Toast } from "react-bootstrap";
 import UserAccount from "./UserAccount";
-import { fetchAdminTimetable, fetchLecturers, fetchClassrooms, checkClash, lockClass, releaseClass, rollbackTimetable, unrollbackTimetable } from "../api/timetableAPI";
+import { fetchAdminTimetable, fetchLecturers, fetchClassrooms, checkClash, lockClass, releaseClass,  rollbackTimetable, unrollbackTimetable } from "../api/timetableAPI";
 import { convertTimetableEntry } from "../utils/convertTimetableEntry";
 import { saveAdminTimetable } from "../api/timetableAPI";
 import { useCalendarStore } from "./calendarStore";
@@ -22,6 +22,24 @@ export default function AdminCalendar() {
     // Lock state for class
     const [isClassLocked, setIsClassLocked] = useState(false);
     const [lockLoading, setLockLoading] = useState(false);
+
+    // Check lock status on mount/login/refresh
+    useEffect(() => {
+        const checkClassroomLock = async () => {
+            try {
+                const res = await checkLock();
+                if (res && res.status === "success" && res.locked === true) {
+                    setIsClassLocked(true);
+                } else {
+                    setIsClassLocked(false);
+                }
+            } catch (err) {
+                setIsClassLocked(false);
+                console.error("Error checking classroom lock:", err);
+            }
+        };
+        checkClassroomLock();
+    }, [isAuthenticated]);
 
     // Lock/Unlock class handler
     const handleLockToggle = async () => {
@@ -44,6 +62,13 @@ export default function AdminCalendar() {
                 } else {
                     alert("Failed to unlock class. Server did not return success.");
                 }
+            }
+            // Always fetch classrooms after lock/unlock
+            try {
+                const data = await fetchClassrooms();
+                setClassrooms(data.classes);
+            } catch (err) {
+                console.error("Error fetching classrooms after lock/unlock:", err);
             }
         } catch (err) {
             alert("Failed to " + (isClassLocked ? "unlock" : "lock") + " class. See console for details.");
@@ -72,7 +97,6 @@ export default function AdminCalendar() {
     const [isClash, setIsClash] = useState(false);
     const [clashMessage, setClashMessage] = useState("");
     const [clashEvents, setClashEvents] = useState([]);
-    // Replace your current state with these two states
     const [persistentConflicts, setPersistentConflicts] = useState([]); //All conflicts (persistent)
     const [visibleNotifications, setVisibleNotifications] = useState([]); //Temporary notifications
     const [highlightedEvents, setHighlightedEvents] = useState([]);
@@ -100,6 +124,7 @@ export default function AdminCalendar() {
         if (!program || !year) return;
 
         setEvents([]); // Clear previous entries before fetching
+        setCurrentEvent(null); // Clear current event/course title
 
         fetchAdminTimetable(program, year)
             .then((data) => {
@@ -107,9 +132,11 @@ export default function AdminCalendar() {
                     .map(entry => convertTimetableEntry(entry))
                     .filter(e => e !== null);
                 setEvents(formatted);
+                setCurrentEvent(null); // Clear current event/course title after fetch
             })
             .catch(err => {
                 console.error("Admin timetable fetch error:", err);
+                setCurrentEvent(null); // Clear current event/course title on error
                 // Optionally, show an error notification here
             });
     }, [program, year]);
@@ -120,7 +147,7 @@ export default function AdminCalendar() {
     const handleEventAdd = (event) => {
         const eventWithId = {
             ...event,
-            id: uuidv4() // Adding a unique ID to the event
+            id: uuidv4()
         };
         setCurrentEvent(eventWithId);
         setShowModal(true);
@@ -254,7 +281,6 @@ export default function AdminCalendar() {
                 };
             });
 
-
             console.log("📤 Entries to be sent:", entries);
 
             // Validate required fields
@@ -288,6 +314,7 @@ export default function AdminCalendar() {
 
             await saveAdminTimetable(payload);
             alert("Events saved successfully!");
+            setCurrentEvent(null); // Clear current event/course title after save
         } catch (err) {
             console.error("❌ Failed to save events:", err);
 
@@ -298,6 +325,7 @@ export default function AdminCalendar() {
             } else {
                 alert("Failed to save events. Please check the console for details.");
             }
+            setCurrentEvent(null); // Clear current event/course title on error
         }
     };
 
@@ -511,15 +539,28 @@ const handleUnrollback = async () => {
                 top: "60px",
                 right: "20px",
                 zIndex: 1000,
+                display: "flex",
+                gap: "10px"
             }}>
                 <Button
                     variant={isClassLocked ? "danger" : "primary"}
                     onClick={handleLockToggle}
-                    //disabled={lockLoading || !program || !year}
                 >
                     {lockLoading
                         ? (isClassLocked ? "Unlocking..." : "Locking...")
                         : (isClassLocked ? "Unlock Class" : "Lock Class")}
+                </Button>
+                {/* Clear Timetable Button */}
+                <Button
+                    variant="outline-secondary"
+                    onClick={() => {
+                        setEvents([]);
+                        setDraggedEvents([]);
+                        setCurrentEvent(null);
+                    }}
+                    disabled={events.length === 0}
+                >
+                    Clear Timetable
                 </Button>
             </div>
              <ToastContainer position="top-end" className="p-3" style={{zIndex: 9999}} >
@@ -590,7 +631,7 @@ const handleUnrollback = async () => {
             <Button
                 variant="success"
                 onClick={hundleSaveAllEvents}
-                disabled={clashEvents.length > 0}
+                disabled={clashEvents.length > 0 || events.length === 0}
             >
                 Save Timetable
             </Button>
