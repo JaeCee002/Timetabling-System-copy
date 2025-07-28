@@ -562,7 +562,7 @@ export default function AdminCalendar() {
                         ? (isClassLocked ? "Unlocking..." : "Locking...")
                         : (isClassLocked ? "Unlock Class" : "Lock Class")}
                 </Button>
-                {/* Clear Timetable Button */}
+                // Clear Timetable Button 
 //                 <Button
 //                     variant="outline-secondary"
 //                     onClick={() => {
@@ -609,6 +609,15 @@ export default function AdminCalendar() {
                 top: '10px',
                 right: '20px',
                 zIndex: 1000,
+            //     width: '40px', // Fixed width
+            //     height: '40px', // Fixed height to match width
+            //     borderRadius: '0%', // This makes it circular
+            //     overflow: 'hidden', // Ensures content stays within circle
+            //     display: 'flex',
+            //     alignItems: 'center',
+            //     justifyContent: 'center',
+            //     backgroundColor: '#f8f9fa', // Optional background color
+            //     boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
             }}>
                 <UserAccount userRole="admin" />
             </div>
@@ -650,19 +659,52 @@ export default function AdminCalendar() {
                 >
                     Save Timetable
                 </Button>
-                <Button
-                    variant="danger"
-                    onClick={handleRollback}
-                >
-                    Rollback
-                </Button>
-                <Button
-                    variant="info"
-                    onClick={handleUnrollback}
-                >
-                    Unrollback
-                </Button>
-            </div>
+          </div>
+           <div
+            style={{
+                position: "absolute",
+                bottom: "45px",
+                right: "60px",
+                zIndex: 1000,
+                display: "flex",
+                gap: "10px"
+            }}>
+            <i 
+                className="bi bi-arrow-left-circle"
+                style={{
+                    fontSize: "2rem",  // Larger icon (adjust as needed: 1.5rem, 2rem, 2.5rem, etc.)
+                    color: "#12273aff",  // Bootstrap's "danger" red (optional)
+                    cursor: "pointer"  // Hand cursor on hover
+                }}
+                onClick={handleRollback}
+                data-bs-toggle="tooltip"
+                data-bs-placement="top"
+                title="Rollback to previous version"
+            />
+        </div>
+          <div
+            style={{
+                position: "absolute",
+                bottom: "45px",
+                right: "20px",
+                zIndex: 1000,
+                display: "flex",
+                gap: "10px"
+            }}>
+            <i 
+                className="bi bi-arrow-right-circle"
+                style={{
+                    fontSize: "2rem",  // Larger icon (adjust as needed: 1.5rem, 2rem, 2.5rem, etc.)
+                    color: "#12273aff",  // Bootstrap's "danger" red (optional)
+                    cursor: "pointer"  // Hand cursor on hover
+                }}
+                onClick={handleRollback}
+                data-bs-toggle="tooltip"
+                data-bs-placement="top"
+                title="Move forward to next version"
+            />
+        </div>
+        
 
             <MyCalendar
                 events={events}
