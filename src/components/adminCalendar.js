@@ -458,11 +458,24 @@ const toggleConflictHighlight = () => {
             {/* Lock/Unlock Class Button */}
             <div style={{
                 position: "absolute",
-                top: "60px",
-                right: "20px",
+                bottom: "60px",
+                left: "30px",
                 zIndex: 1000,
             }}>
-                <Button
+                <i class= "bi bi-lock-fill lock-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Secure"
+
+                      variant={isClassLocked ? "danger" : "primary"}
+                      onClick={handleLockToggle}
+                      disabled={lockLoading || !program || !year}
+                >
+                {lockLoading
+                        ? (isClassLocked ? "Unlocking..." : "Locking...")
+                        : (isClassLocked ? "Unlock Class" : "Lock Class")}
+                
+                </i>
+
+                {/* <Button
+                
                     variant={isClassLocked ? "danger" : "primary"}
                     onClick={handleLockToggle}
                     //disabled={lockLoading || !program || !year}
@@ -470,7 +483,7 @@ const toggleConflictHighlight = () => {
                     {lockLoading
                         ? (isClassLocked ? "Unlocking..." : "Locking...")
                         : (isClassLocked ? "Unlock Class" : "Lock Class")}
-                </Button>
+                </Button> */}
             </div>
              <ToastContainer position="top-end" className="p-3" style={{zIndex: 9999}} >
                 {visibleNotifications.map((clash, index) => (
