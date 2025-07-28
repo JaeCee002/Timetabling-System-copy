@@ -115,6 +115,19 @@ export const checkLock = async () => {
     return response.data;
 };
 
+export const rollbackTimetable = async (program, year) => {
+    const response = await axios.get("/timetable", {
+        params: { program, year, rollback: 1 },
+    });
+    return response.data;
+};
+export const unrollbackTimetable = async (program, year) => {
+    const response = await axios.get("/timetable", {
+        params: { program, year, rollback: -1 },
+    });
+    return response.data;
+};
+
 
 //  export const saveAdminTimetable = async (payload) => {
 //     try {
