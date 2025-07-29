@@ -639,7 +639,7 @@ export default function AdminCalendar() {
             <div style={{
                 position: "absolute",
                 bottom: "10px",
-                right: "120px", // Adjust as needed
+                right: "5px", 
                 zIndex: "1000",
                 display: "flex",
                 gap: "10px"
@@ -652,8 +652,8 @@ export default function AdminCalendar() {
                     {persistentConflicts.length ? `⚠️ Conflicts (${persistentConflicts.length}) ⚠️` : "Show Conflicts"}
                 </Button>
 
-                <Button className="btn btn-outline-success"
-                    //variant="success"
+                <Button className=""
+                    variant="outline-success"
                     onClick={hundleSaveAllEvents}
                     disabled={clashEvents.length > 0 || events.length === 0}
                 >
@@ -661,11 +661,24 @@ export default function AdminCalendar() {
                     Save Timetable
                 </Button>
 
-                <Button class="btn btn-outline-success text-dark">
+                <Button variant="outline-success" class="text-dark">
                     <i className="bi bi-printer"> </i>
                     Print
                 </Button>
-          </div>          
+          </div>  
+          <div
+            style={{
+                position: "absolute",
+                bottom: "10px",
+                left: "200px", 
+                zIndex: "1000",
+                display: "flex",
+                gap: "10px"
+            }}>
+            <Button variant="outline-success" className="text-dark">
+                Suggested Slots
+            </Button>
+          </div>        
            <div
             style={{
                 position: "absolute",
