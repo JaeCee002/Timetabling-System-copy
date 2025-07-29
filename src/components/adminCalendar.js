@@ -644,7 +644,7 @@ export default function AdminCalendar() {
                 display: "flex",
                 gap: "10px"
             }}>
-                <Button
+                <Button 
                     variant={persistentConflicts.length ? "warning" : "outline-warning"}
                     onClick={toggleConflictHighlight}
                     className={`conflict-btn ${persistentConflicts.length ? 'has-conflicts' : ''}`}
@@ -652,14 +652,20 @@ export default function AdminCalendar() {
                     {persistentConflicts.length ? `⚠️ Conflicts (${persistentConflicts.length}) ⚠️` : "Show Conflicts"}
                 </Button>
 
-                <Button
-                    variant="success"
+                <Button className="btn btn-outline-success"
+                    //variant="success"
                     onClick={hundleSaveAllEvents}
                     disabled={clashEvents.length > 0 || events.length === 0}
                 >
+                <i className="bi bi-save text-dark"> </i>
                     Save Timetable
                 </Button>
-          </div>
+
+                <Button class="btn btn-outline-success text-dark">
+                    <i className="bi bi-printer"> </i>
+                    Print
+                </Button>
+          </div>          
            <div
             style={{
                 position: "absolute",
