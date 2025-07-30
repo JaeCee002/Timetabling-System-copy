@@ -114,7 +114,7 @@ return (
           borderRadius: "8px",
           padding: "10px 18px 10px 14px",
           fontWeight: "bold",
-          boxShadow: "0 4px 16px rgba(0,0,0,0.15)",
+          boxShadow: "0 4px 16px rgba(173, 74, 74, 0.15)",
           display: "flex",
           alignItems: "center",
           minWidth: "220px",

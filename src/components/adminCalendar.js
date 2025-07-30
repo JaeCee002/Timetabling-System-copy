@@ -13,6 +13,8 @@ import { printCalendarAsPDF } from "../utils/printTimetable";
 import { saveAdminTimetable } from "../api/timetableAPI";
 import { useCalendarStore } from "./calendarStore";
 import { useAuth } from "./AuthContext";
+import Dropdown from 'react-bootstrap/Dropdown';
+import DropdownButton from 'react-bootstrap/DropdownButton';
 
 import "./adminCalendar.css";
 
@@ -678,9 +680,15 @@ export default function AdminCalendar() {
                     display: "flex",
                     gap: "10px"
                 }}>
-                <Button variant="outline-success" className="text-dark">
-                    Suggested Slots
-                </Button>
+                <DropdownButton
+                    variant="outline-success"
+                    title="Suggested Slots"
+                    className="text-dark"
+                    >
+                    <Dropdown.Item className="text-dark" eventKey="lecture">Lecture</Dropdown.Item>
+                    <Dropdown.Item className="text-dark" eventKey="classroom">Classroom</Dropdown.Item>
+                    <Dropdown.Item className="text-dark" eventKey="both">Both</Dropdown.Item>
+                </DropdownButton>
             </div>
             <div
                 style={{

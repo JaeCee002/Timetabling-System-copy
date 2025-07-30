@@ -145,3 +145,6 @@
 .modal-title {
   font-size: 1.1rem !important;
 }
+.fc-day-today {
+  background-color: transparent !important;
+}
