@@ -7,8 +7,9 @@ import { v4 as uuidv4 } from 'uuid';
 import { Modal, Button } from "react-bootstrap";
 import { ToastContainer, Toast } from "react-bootstrap";
 import UserAccount from "./UserAccount";
-import { fetchAdminTimetable, fetchLecturers, fetchClassrooms, checkClash, lockClass, releaseClass, checkLock, rollbackTimetable, unrollbackTimetable } from "../api/timetableAPI";
+import { fetchAdminTimetable, fetchLecturers, fetchClassrooms, checkClash, lockClass, releaseClass, checkLock, rollbackTimetable, unrollbackTimetable, suggestSlots } from "../api/timetableAPI";
 import { convertTimetableEntry } from "../utils/convertTimetableEntry";
+import { printCalendarAsPDF } from "../utils/printTimetable";
 import { saveAdminTimetable } from "../api/timetableAPI";
 import { useCalendarStore } from "./calendarStore";
 import { useAuth } from "./AuthContext";
@@ -541,16 +542,16 @@ export default function AdminCalendar() {
                 display: "flex",
                 gap: "10px"
             }}>
-                <i class= "bi bi-lock-fill lock-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Secure"
+                <i class="bi bi-lock-fill lock-icon" data-bs-toggle="tooltip" data-bs-placement="top" title="Secure"
 
-                      variant={isClassLocked ? "danger" : "primary"}
-                      onClick={handleLockToggle}
-                      disabled={lockLoading || !program || !year}
+                    variant={isClassLocked ? "danger" : "primary"}
+                    onClick={handleLockToggle}
+                    disabled={lockLoading || !program || !year}
                 >
-                {lockLoading
+                    {lockLoading
                         ? (isClassLocked ? "Unlocking..." : "Locking...")
                         : (isClassLocked ? "Unlock Class" : "Lock Class")}
-                
+
                 </i>
 
                 {/* <Button
@@ -601,23 +602,20 @@ export default function AdminCalendar() {
 
 
 
-
-
-            {/* Add this header */}
             <div style={{
                 position: 'absolute',
                 top: '10px',
                 right: '20px',
                 zIndex: 1000,
-            //     width: '40px', // Fixed width
-            //     height: '40px', // Fixed height to match width
-            //     borderRadius: '0%', // This makes it circular
-            //     overflow: 'hidden', // Ensures content stays within circle
-            //     display: 'flex',
-            //     alignItems: 'center',
-            //     justifyContent: 'center',
-            //     backgroundColor: '#f8f9fa', // Optional background color
-            //     boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
+                //     width: '40px', // Fixed width
+                //     height: '40px', // Fixed height to match width
+                //     borderRadius: '0%', // This makes it circular
+                //     overflow: 'hidden', // Ensures content stays within circle
+                //     display: 'flex',
+                //     alignItems: 'center',
+                //     justifyContent: 'center',
+                //     backgroundColor: '#f8f9fa', // Optional background color
+                //     boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
             }}>
                 <UserAccount userRole="admin" />
             </div>
@@ -635,16 +633,15 @@ export default function AdminCalendar() {
                     setYear(parseInt(year));
                 }}
             />
-            {/*Adding a save button*/}
             <div style={{
                 position: "absolute",
                 bottom: "10px",
-                right: "5px", 
+                right: "5px",
                 zIndex: "1000",
                 display: "flex",
                 gap: "10px"
             }}>
-                <Button 
+                <Button
                     variant={persistentConflicts.length ? "warning" : "outline-warning"}
                     onClick={toggleConflictHighlight}
                     className={`conflict-btn ${persistentConflicts.length ? 'has-conflicts' : ''}`}
@@ -657,73 +654,79 @@ export default function AdminCalendar() {
                     onClick={hundleSaveAllEvents}
                     disabled={clashEvents.length > 0 || events.length === 0}
                 >
-                <i className="bi bi-save text-dark"> </i>
+                    <i className="bi bi-save text-dark"> </i>
                     Save Timetable
                 </Button>
 
-                <Button variant="outline-success" class="text-dark">
-                    <i className="bi bi-printer"> </i>
-                    Print
+                <Button
+                    className=""
+                    variant="outline-success"
+                    onClick={() => printCalendarAsPDF('.fc')}
+                    disabled={events.length === 0}
+                >
+                    <i className="bi bi-printer text-dark"> </i>
+                    Print Timetable
                 </Button>
-          </div>  
-          <div
-            style={{
-                position: "absolute",
-                bottom: "10px",
-                left: "200px", 
-                zIndex: "1000",
-                display: "flex",
-                gap: "10px"
-            }}>
-            <Button variant="outline-success" className="text-dark">
-                Suggested Slots
-            </Button>
-          </div>        
-           <div
-            style={{
-                position: "absolute",
-                bottom: "45px",
-                right: "60px",
-                zIndex: 1000,
-                display: "flex",
-                gap: "10px"
-            }}>
-            <i 
-                className="bi bi-arrow-left-circle"
+
+            </div>
+            <div
                 style={{
-                    fontSize: "2rem",  // Larger icon (adjust as needed: 1.5rem, 2rem, 2.5rem, etc.)
-                    color: "#12273aff",  // Bootstrap's "danger" red (optional)
-                    cursor: "pointer"  // Hand cursor on hover
-                }}
-                onClick={handleRollback}
-                data-bs-toggle="tooltip"
-                data-bs-placement="top"
-                title="Rollback to previous version"
-            />
-        </div>
-          <div
-            style={{
-                position: "absolute",
-                bottom: "45px",
-                right: "20px",
-                zIndex: 1000,
-                display: "flex",
-                gap: "10px"
-            }}>
-            <i 
-                className="bi bi-arrow-right-circle"
+                    position: "absolute",
+                    bottom: "10px",
+                    left: "200px",
+                    zIndex: "1000",
+                    display: "flex",
+                    gap: "10px"
+                }}>
+                <Button variant="outline-success" className="text-dark">
+                    Suggested Slots
+                </Button>
+            </div>
+            <div
                 style={{
-                    fontSize: "2rem",  // Larger icon (adjust as needed: 1.5rem, 2rem, 2.5rem, etc.)
-                    color: "#12273aff",  // Bootstrap's "danger" red (optional)
-                    cursor: "pointer"  // Hand cursor on hover
-                }}
-                onClick={handleRollback}
-                data-bs-toggle="tooltip"
-                data-bs-placement="top"
-                title="Move forward to next version"
-            />
-        </div>
-        
+                    position: "absolute",
+                    bottom: "45px",
+                    right: "60px",
+                    zIndex: 1000,
+                    display: "flex",
+                    gap: "10px"
+                }}>
+                <i
+                    className="bi bi-arrow-left-circle"
+                    style={{
+                        fontSize: "2rem",  // Larger icon (adjust as needed: 1.5rem, 2rem, 2.5rem, etc.)
+                        color: "#12273aff",  // Bootstrap's "danger" red (optional)
+                        cursor: "pointer"  // Hand cursor on hover
+                    }}
+                    onClick={handleRollback}
+                    data-bs-toggle="tooltip"
+                    data-bs-placement="top"
+                    title="Rollback to previous version"
+                />
+            </div>
+            <div
+                style={{
+                    position: "absolute",
+                    bottom: "45px",
+                    right: "20px",
+                    zIndex: 1000,
+                    display: "flex",
+                    gap: "10px"
+                }}>
+                <i
+                    className="bi bi-arrow-right-circle"
+                    style={{
+                        fontSize: "2rem",  // Larger icon (adjust as needed: 1.5rem, 2rem, 2.5rem, etc.)
+                        color: "#12273aff",  // Bootstrap's "danger" red (optional)
+                        cursor: "pointer"  // Hand cursor on hover
+                    }}
+                    onClick={handleUnrollback}
+                    data-bs-toggle="tooltip"
+                    data-bs-placement="top"
+                    title="Move forward to next version"
+                />
+            </div>
+
 
             <MyCalendar
                 events={events}

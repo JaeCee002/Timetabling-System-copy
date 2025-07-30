@@ -91,6 +91,14 @@ export const checkClash = async (payload) => {
     return response.data;
 };
 
+export const suggestSlots = async (lecturer, classroom) => {
+
+    const response = await axios.post("/free_slots", {
+        lecturer: lecturer, class: classroom
+    });
+    return response.data;
+};
+
 export const lockClass = async () => {
 
     const response = await axios.get("/timetable/lock", {
