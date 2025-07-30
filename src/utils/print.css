@@ -1,0 +1,53 @@
+@media print {
+  body {
+    zoom: 80%;
+    margin: 0;
+    padding: 0;
+    overflow: visible !important;
+  }
+
+  .fc {
+    max-height: none !important;
+    overflow: visible !important;
+  }
+
+  .fc-scroller, .fc-scrollgrid-sync-table, .fc-timegrid {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  .fc-timegrid-slot {
+    height: auto !important;
+  }
+
+  .fc-timegrid-event {
+    position: static !important;
+    transform: none !important;
+  }
+
+  .fc-timegrid-col-frame {
+    height: auto !important;
+  }
+
+  .fc-timegrid-body {
+    overflow: visible !important;
+  }
+
+  .fc-scrollgrid {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  .fc-event {
+    page-break-inside: avoid;
+  }
+
+  .fc-col-header-cell,
+  .fc-timegrid-slot-label {
+    font-weight: bold;
+  }
+
+  ::-webkit-scrollbar {
+    display: none;
+  }
+}
