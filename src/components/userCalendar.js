@@ -24,7 +24,7 @@ function UserCalendar() {
   }, []);
 
   return (
-    <div style={{ position: "relative" }}>
+    <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
       {/* Profile at top right */}
       <div style={{
         position: 'absolute',
