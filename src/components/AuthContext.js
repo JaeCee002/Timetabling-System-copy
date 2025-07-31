@@ -1,4 +1,3 @@
-// AuthContext.js - Create this new file
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { login as loginFromAPI, logout as logoutFromAPI } from "../api/timetableAPI.js";
 
@@ -13,21 +12,6 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-  // const [user, setUser] = useState(null);
-  // const [isAuthenticated, setIsAuthenticated] = useState(false);
-  // const [loading, setLoading] = useState(true);
-
-  // useEffect(() => {
-  //   const checkSession = async () => {
-  //     try {
-  //       setLoading(false);
-  //     } catch (error) {
-  //       setLoading(false);
-  //     }
-  //   };
-
-  //   checkSession();
-  // }, []);
 
   const [user, setUser] = useState(() => {
     const stored = localStorage.getItem("user");
@@ -66,17 +50,6 @@ export const AuthProvider = ({ children }) => {
       };
     }
 
-      // const route = result.user.role === "admin" 
-      //     ? "/adminCalendar" 
-      //     : "/userCalendar";
-        
-      //   return {
-      //     success: true,
-      //     user: result.user,
-      //     route
-      //   };
-      // }
-
     return {
       success: false,
       error: result.error || "Invalid credentials"
@@ -84,7 +57,7 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async () => {
-    await logoutFromAPI(); // Call your logout API
+    await logoutFromAPI();
     setUser(null);
     setIsAuthenticated(false);
     localStorage.removeItem("user");

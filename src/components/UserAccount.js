@@ -11,11 +11,8 @@ const UserAccount = ({ userRole = "admin" }) => {
   const toggleDropdown = () => setShowDropdown((prev) => !prev);
   
   
-  const currentUser = userRole === "admin"
-    ? { name: "Administrator", email: "admin@example.com", role: "admin" }
-    : { name: "User", email: "user@example.com", role: "user" };
+  const currentUser = user || { name: "Unknown", email: "unknown@example.com", role: "guest" };
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (showDropdown && !event.target.closest('.user-account-dropdown')) {
