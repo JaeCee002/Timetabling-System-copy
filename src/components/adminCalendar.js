@@ -9,6 +9,7 @@ import { ToastContainer, Toast } from "react-bootstrap";
 import UserAccount from "./UserAccount";
 import { fetchAdminTimetable, fetchLecturers, fetchClassrooms, checkClash, lockClass, releaseClass, checkLock, rollbackTimetable, unrollbackTimetable, suggestSlots } from "../api/timetableAPI";
 import { convertTimetableEntry } from "../utils/convertTimetableEntry";
+import { convertSuggestedSlots } from '../utils/convertSlotSuggestions';
 import { printCalendarAsPDF } from "../utils/printTimetable";
 import { saveAdminTimetable } from "../api/timetableAPI";
 import { useCalendarStore } from "./calendarStore";
@@ -537,22 +538,55 @@ const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
 const handleSuggestSlots = async (type) => {
   if (!currentEvent) return;
+
+  const actualEvent = events.find(e => e.id === currentEvent.id);
+  
+  if (!actualEvent) {
+    alert("Event not found. Please try again.");
+    return;
+  }
+
+  const lecturerId = actualEvent.extendedProps?.lecturer_id;
+  const classroomId = actualEvent.extendedProps?.classroom;
+
+  if (!lecturerId && !classroomId) {
+    alert("Please assign a lecturer and/or classroom to this event first.");
+    return;
+  }
+
+  const payload = {};
+
+    if (lecturerId) {
+    payload.lecturer_id = lecturerId;
+  }  
+  if (classroomId) {
+    payload.class = classroomId;
+  }
+
+
+  let notificationMessage = "Suggested free slots";
+  const lecturerName = currentEvent.extendedProps?.lecturer;
+  
+  if (lecturerId && classroomId) {
+    notificationMessage += ` (avoiding conflicts for ${lecturerName || 'selected lecturer'} and ${classroomId})`;
+  } else if (lecturerId) {
+    notificationMessage += ` (avoiding conflicts for lecturer ${lecturerName || lecturerId})`;
+  } else if (classroomId) {
+    notificationMessage += ` (avoiding conflicts for classroom ${classroomId})`;
+  }
   
   setSuggestionsLoading(true);
   try {
-    const payload = {
-      course_id: currentEvent.title,
-      day_of_week: currentEvent.start.toLocaleDateString("en-US", { weekday: "long" }),
-      start_time: currentEvent.start.toTimeString().slice(0, 8),
-      end_time: currentEvent.end.toTimeString().slice(0, 8),
-      type: type // 'lecture', 'classroom', or 'both'
-    };
-
     const data = await suggestSlots(payload);
-    if (data.status === "success") {
-      setSuggestedSlots(data.suggestions);
-      // Show suggestions to the user (you might want to implement this)
-      alert(`Suggested slots:\n${JSON.stringify(data.suggestions, null, 2)}`);
+    if (data.success) {
+      const calendarSlots = convertSuggestedSlots(data.suggested_slots);
+
+      setEvents(prev => prev.filter(e => !e.extendedProps?.isSuggestion));
+      
+      setEvents(prev => [...prev, ...calendarSlots]);
+
+      setSuggestedSlots(data.suggested_slots);
+      alert(`${notificationMessage}`);
     } else {
       alert("No suggestions available");
     }
@@ -562,6 +596,11 @@ const handleSuggestSlots = async (type) => {
   } finally {
     setSuggestionsLoading(false);
   }
+};
+
+const clearSuggestions = () => {
+  setEvents(prev => prev.filter(e => !e.extendedProps?.isSuggestion));
+  setSuggestedSlots([]);
 };
 
 
@@ -704,43 +743,33 @@ const handleSuggestSlots = async (type) => {
 
             </div>
             <div
-                style={{
-                    position: "absolute",
-                    bottom: "4px",
-                    left: "200px",
-                    zIndex: "1000",
-                    display: "flex",
-                    gap: "10px"
-                }}>
-                <DropdownButton
-                    variant="outline-success"
-                    title={suggestionsLoading ? "Loading..." : "Suggested Slots"}
-                    className="text-dark"
-                    disabled={!currentEvent || suggestionsLoading}
-                    >
-                    <Dropdown.Item 
-                        className="text-dark" 
-                        eventKey="lecture"
-                        onClick={() => handleSuggestSlots("lecture")}
-                    >
-                        Lecture
-                    </Dropdown.Item>
-                    <Dropdown.Item 
-                        className="text-dark" 
-                        eventKey="classroom"
-                        onClick={() => handleSuggestSlots("classroom")}
-                    >
-                        Classroom
-                    </Dropdown.Item>
-                    <Dropdown.Item 
-                        className="text-dark" 
-                        eventKey="both"
-                        onClick={() => handleSuggestSlots("both")}
-                    >
-                        Both
-                    </Dropdown.Item>
-                </DropdownButton>
-            </div>
+    style={{
+        position: "absolute",
+        bottom: "4px",
+        left: "200px",
+        zIndex: "1000",
+        display: "flex",
+        gap: "10px"
+    }}>
+    <Button
+        variant="outline-success"
+        className="text-dark"
+        onClick={handleSuggestSlots}
+        disabled={!currentEvent || suggestionsLoading}
+    >
+        {suggestionsLoading ? "Loading..." : "Suggested Slots"}
+    </Button>
+    {suggestedSlots.length > 0 && (
+        <Button
+            variant="outline-secondary"
+            className="text-dark"
+            onClick={clearSuggestions}
+            size="sm"
+        >
+            ✖️ Clear Suggestions
+        </Button>
+    )}
+</div>
             <div
                 style={{
                     position: "absolute",
@@ -775,9 +804,9 @@ const handleSuggestSlots = async (type) => {
                 <i
                     className="bi bi-arrow-right-circle"
                     style={{
-                        fontSize: "2rem",  // Larger icon (adjust as needed: 1.5rem, 2rem, 2.5rem, etc.)
-                        color: "#12273aff",  // Bootstrap's "danger" red (optional)
-                        cursor: "pointer"  // Hand cursor on hover
+                        fontSize: "2rem",
+                        color: "#12273aff",
+                        cursor: "pointer"
                     }}
                     onClick={handleUnrollback}
                     data-bs-toggle="tooltip"

@@ -93,7 +93,7 @@ export const checkClash = async (payload) => {
 
 export const suggestSlots = async (payload) => {
   try {
-    const response = await axios.post('/api/timetable/suggest-slots', payload);
+    const response = await axios.post('/free_slots', payload);
     return response.data;
   } catch (error) {
     console.error('Error suggesting slots:', error);
