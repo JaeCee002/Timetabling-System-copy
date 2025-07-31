@@ -532,14 +532,46 @@ export default function AdminCalendar() {
         }
     };
 
+const [suggestedSlots, setSuggestedSlots] = useState([]);
+const [suggestionsLoading, setSuggestionsLoading] = useState(false);
+
+const handleSuggestSlots = async (type) => {
+  if (!currentEvent) return;
+  
+  setSuggestionsLoading(true);
+  try {
+    const payload = {
+      course_id: currentEvent.title,
+      day_of_week: currentEvent.start.toLocaleDateString("en-US", { weekday: "long" }),
+      start_time: currentEvent.start.toTimeString().slice(0, 8),
+      end_time: currentEvent.end.toTimeString().slice(0, 8),
+      type: type // 'lecture', 'classroom', or 'both'
+    };
+
+    const data = await suggestSlots(payload);
+    if (data.status === "success") {
+      setSuggestedSlots(data.suggestions);
+      // Show suggestions to the user (you might want to implement this)
+      alert(`Suggested slots:\n${JSON.stringify(data.suggestions, null, 2)}`);
+    } else {
+      alert("No suggestions available");
+    }
+  } catch (err) {
+    console.error("Error fetching suggestions:", err);
+    alert("Failed to fetch suggestions");
+  } finally {
+    setSuggestionsLoading(false);
+  }
+};
+
 
     return (
         <div className="Container" style={{ display: "flex" }}>
             {/* Lock/Unlock Class Button */}
             <div style={{
                 position: "absolute",
-                bottom: "60px",
-                left: "30px",
+                bottom: "5px",
+                left: "60px",
                 zIndex: 1000,
                 display: "flex",
                 gap: "10px"
@@ -637,7 +669,7 @@ export default function AdminCalendar() {
             />
             <div style={{
                 position: "absolute",
-                bottom: "10px",
+                bottom: "4px",
                 right: "5px",
                 zIndex: "1000",
                 display: "flex",
@@ -674,7 +706,7 @@ export default function AdminCalendar() {
             <div
                 style={{
                     position: "absolute",
-                    bottom: "10px",
+                    bottom: "4px",
                     left: "200px",
                     zIndex: "1000",
                     display: "flex",
@@ -682,12 +714,31 @@ export default function AdminCalendar() {
                 }}>
                 <DropdownButton
                     variant="outline-success"
-                    title="Suggested Slots"
+                    title={suggestionsLoading ? "Loading..." : "Suggested Slots"}
                     className="text-dark"
+                    disabled={!currentEvent || suggestionsLoading}
                     >
-                    <Dropdown.Item className="text-dark" eventKey="lecture">Lecture</Dropdown.Item>
-                    <Dropdown.Item className="text-dark" eventKey="classroom">Classroom</Dropdown.Item>
-                    <Dropdown.Item className="text-dark" eventKey="both">Both</Dropdown.Item>
+                    <Dropdown.Item 
+                        className="text-dark" 
+                        eventKey="lecture"
+                        onClick={() => handleSuggestSlots("lecture")}
+                    >
+                        Lecture
+                    </Dropdown.Item>
+                    <Dropdown.Item 
+                        className="text-dark" 
+                        eventKey="classroom"
+                        onClick={() => handleSuggestSlots("classroom")}
+                    >
+                        Classroom
+                    </Dropdown.Item>
+                    <Dropdown.Item 
+                        className="text-dark" 
+                        eventKey="both"
+                        onClick={() => handleSuggestSlots("both")}
+                    >
+                        Both
+                    </Dropdown.Item>
                 </DropdownButton>
             </div>
             <div

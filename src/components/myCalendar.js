@@ -209,7 +209,7 @@ return (
       <div className="card-body">
 
         {draggedEvents && draggedEvents.length > 0 && (
-          <div className="p-3 d-flex flex-wrap gap-1">
+          <div className=" d-flex flex-wrap gap-1">
             {draggedEvents.map((e, index) => (
               <div
                 key={index}
@@ -326,7 +326,7 @@ return (
               const res = await checkClash(payload);
 
               if (res.status === "failure") {
-                window.alert(`${res.message}`);
+                //window.alert(`${res.message}`);
                 //showAlertAboveEvent(info, `✖ Clash: ${res.message}`);
 
                 if (onClashDetected) {

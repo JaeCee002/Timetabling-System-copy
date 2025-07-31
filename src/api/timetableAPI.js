@@ -91,13 +91,16 @@ export const checkClash = async (payload) => {
     return response.data;
 };
 
-export const suggestSlots = async (lecturer, classroom) => {
-
-    const response = await axios.post("/free_slots", {
-        lecturer: lecturer, class: classroom
-    });
+export const suggestSlots = async (payload) => {
+  try {
+    const response = await axios.post('/api/timetable/suggest-slots', payload);
     return response.data;
+  } catch (error) {
+    console.error('Error suggesting slots:', error);
+    throw error;
+  }
 };
+
 
 export const lockClass = async () => {
 
@@ -135,48 +138,3 @@ export const unrollbackTimetable = async (program, year) => {
     });
     return response.data;
 };
-
-
-//  export const saveAdminTimetable = async (payload) => {
-//     try {
-//         console.log("🌐 API: Sending payload:", payload);
-        
-//         // Create FormData to send as multipart/form-data (like a traditional form)
-//         const formData = new FormData();
-        
-//         // Add individual fields that PHP expects in $_POST
-//         formData.append('program_name', payload.program_name);
-//         formData.append('year', payload.year);
-        
-//         // Add entries as JSON string (PHP will need to json_decode this)
-//         formData.append('entries', JSON.stringify(payload.entries));
-
-//         const response = await axios.post(
-//             "/timetable/save",
-//             formData,  // Changed from 'payload' to 'formData'
-//             {
-//                 headers: {
-//                     'Content-Type': 'multipart/form-data',  // Changed from 'application/json'
-//                 },
-//                 withCredentials: true
-//             }
-//         );
-
-//         console.log("✅ API: Save successful:", response.data);
-//         return response.data;
-        
-//     } catch (error) {
-//         console.error("❌ API: Save failed:", error);
-//         throw error;
-//     }
-// };
-
-// export const saveAdminTimetable = async(school, program, year, events) => {
-//     const response = await axios.post("/timetable/save", {
-//         school,
-//         program,
-//         year,
-//         events
-//     });
-//     return response.data;
-// };
