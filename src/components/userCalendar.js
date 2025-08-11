@@ -33,7 +33,7 @@ function UserCalendar() {
         zIndex: 1000,
       }}>
         <UserAccount userRole="user" />
-      </div>
+      </div> 
       <div style={{
         position: "absolute",
         bottom: "10px",

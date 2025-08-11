@@ -1,3 +1,25 @@
+/*sugest88888888*/
+.fc-suggested-slot {
+  border: 2px dashed var(--fc-border-color, #28a745) !important;
+  animation: pulse-glow 2s infinite;
+  opacity: 0.8;
+}
+
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 0 0 5px rgba(40, 167, 69, 0.3);
+    opacity: 0.7;
+  }
+  50% {
+    box-shadow: 0 0 15px rgba(40, 167, 69, 0.7);
+    opacity: 1;
+  }
+  100% {
+    box-shadow: 0 0 5px rgba(40, 167, 69, 0.3);
+    opacity: 0.7;
+  }
+}
+
 /* Add glowing effect for conflicted events */
 /* Updated glow animation to match button pulse */
 .conflict-glow {

@@ -19,6 +19,7 @@ import DropdownButton from 'react-bootstrap/DropdownButton';
 
 import "./adminCalendar.css";
 
+
 export default function AdminCalendar() {
     const calendarApi = useCalendarStore(state => state.calendarApi);
     const { isAuthenticated } = useAuth();
@@ -533,72 +534,109 @@ export default function AdminCalendar() {
         }
     };
 
+
 const [suggestedSlots, setSuggestedSlots] = useState([]);
 const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
-const handleSuggestSlots = async (type) => {
-  if (!currentEvent) return;
+const handleSuggestSlots = async () => {
+  // 1. Validate prerequisites
+  if (!currentEvent || !calendarApi) {
+    console.warn(currentEvent ? "Calendar API not ready" : "No event selected");
+    return;
+  }
 
+  // 2. Find the actual event
   const actualEvent = events.find(e => e.id === currentEvent.id);
-  
   if (!actualEvent) {
-    alert("Event not found. Please try again.");
+    alert("Event not found. Please refresh and try again.");
     return;
   }
 
-  const lecturerId = actualEvent.extendedProps?.lecturer_id;
-  const classroomId = actualEvent.extendedProps?.classroom;
-
-  if (!lecturerId && !classroomId) {
-    alert("Please assign a lecturer and/or classroom to this event first.");
+  // 3. Check required assignments
+  const { lecturer_id, classroom, lecturer } = actualEvent.extendedProps || {};
+  if (!lecturer_id && !classroom) {
+    alert("Please assign both lecturer and classroom first");
     return;
   }
 
-  const payload = {};
-
-    if (lecturerId) {
-    payload.lecturer_id = lecturerId;
-  }  
-  if (classroomId) {
-    payload.class = classroomId;
-  }
-
-
-  let notificationMessage = "Suggested free slots";
-  const lecturerName = currentEvent.extendedProps?.lecturer;
-  
-  if (lecturerId && classroomId) {
-    notificationMessage += ` (avoiding conflicts for ${lecturerName || 'selected lecturer'} and ${classroomId})`;
-  } else if (lecturerId) {
-    notificationMessage += ` (avoiding conflicts for lecturer ${lecturerName || lecturerId})`;
-  } else if (classroomId) {
-    notificationMessage += ` (avoiding conflicts for classroom ${classroomId})`;
-  }
-  
   setSuggestionsLoading(true);
+
   try {
-    const data = await suggestSlots(payload);
-    if (data.success) {
-      const calendarSlots = convertSuggestedSlots(data.suggested_slots);
+    // 4. Prepare payload
+    const payload = {
+      ...(lecturer_id && { lecturer_id }),
+      ...(classroom && { class: classroom })
+    };
 
-      setEvents(prev => prev.filter(e => !e.extendedProps?.isSuggestion));
-      
-      setEvents(prev => [...prev, ...calendarSlots]);
-
-      setSuggestedSlots(data.suggested_slots);
-      alert(`${notificationMessage}`);
-    } else {
-      alert("No suggestions available");
+    // 5. Fetch suggestions
+    const { success, suggested_slots = [], message } = await suggestSlots(payload);
+    
+    if (!success) {
+      alert(message || "Server error when fetching slots");
+      return;
     }
-  } catch (err) {
-    console.error("Error fetching suggestions:", err);
-    alert("Failed to fetch suggestions");
+
+    if (!suggested_slots?.length) {
+      alert("No available time slots found");
+      return;
+    }
+
+    // 6. Clear previous suggestions
+    clearSuggestions();
+
+    // 7. Convert and add new suggestions
+    const calendarSlots = convertSuggestedSlots(suggested_slots);
+    setEvents(prev => [
+      ...prev.filter(e => !e.extendedProps?.isSuggestion),
+      ...calendarSlots
+    ]);
+
+    // 8. Update state
+    setSuggestedSlots(suggested_slots);
+
+    // 9. Optional: Zoom to first suggested slot
+    if (calendarSlots[0]?.start) {
+      calendarApi.scrollToTime(calendarSlots[0].start);
+    }
+
+  } catch (error) {
+    console.error("Suggestion error:", error);
+    alert(error.response?.data?.message || "Network error");
   } finally {
     setSuggestionsLoading(false);
   }
 };
 
+// Conversion utility (keep this at the top of your file)
+const convertSuggestedSlots = (suggestedSlots) => {
+  if (!Array.isArray(suggestedSlots)) return [];
+  
+  return suggestedSlots.map((slot, index) => ({
+    id: `suggestion-${index}-${slot.day_of_week}-${slot.start_time}`,
+    title: '',
+    start: `${slot.day_of_week}T${slot.start_time}`,
+    end: `${slot.day_of_week}T${slot.end_time}`,
+    display: 'background',
+    extendedProps: { 
+      isSuggestion: true,
+      originalData: slot // Preserve original data
+    },
+    classNames: ['fc-suggested-slot'],
+    borderColor: '#28a745',
+    backgroundColor: 'transparent'
+  }));
+};
+
+// Cleanup function
 const clearSuggestions = () => {
+  // Remove from DOM
+  if (calendarApi) {
+    calendarApi.getEvents()
+      .filter(e => e.extendedProps?.isSuggestion)
+      .forEach(e => e.remove());
+  }
+  
+  // Remove from state
   setEvents(prev => prev.filter(e => !e.extendedProps?.isSuggestion));
   setSuggestedSlots([]);
 };
@@ -859,12 +897,7 @@ const clearSuggestions = () => {
                     <Modal.Title>Assign Details</Modal.Title>
                 </Modal.Header>
                 <Modal.Body className="bg-dark text-white">
-                    {isClash && (
-                        <div className="alert alert-danger" style={{ marginTop: "10px" }}>
-                            {clashMessage}
-                        </div>
-                    )}
-
+                   
                     {/* Lecturer Dropdown */}
                     <div className="custom-dropdown mb-4">
                         <div className="dropdown-label">Lecturer</div>
