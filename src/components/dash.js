@@ -10,6 +10,8 @@ import {
   addCourse,
   addClass,
 } from "../api/timetableAPI"; 
+import { Card } from "react-bootstrap";
+import { Modal, ModalBody, ModalHeader, ModalTitle } from "react-bootstrap";
 
 const tabs = ["courses", "classrooms"];
 
@@ -17,6 +19,89 @@ const tabFields = {
   courses: ["name", "code"],
   classrooms: ["id", "capacity", "locked"]
 };
+
+// Separate CoursesTable component
+export function CoursesTable() {
+  const [courses, setCourses] = useState([]);
+  const [open, setOpen] = useState(false);
+  const [selectedCourse, setSelectedCourse] = useState(null);
+
+  useEffect(() => {
+    fetch("/admin/fetchAllCourses")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status === "success") {
+          setCourses(data.courses);
+        }
+      })
+      .catch((err) => console.error("Error fetching courses:", err));
+  }, []);
+
+  const handleOpenPrograms = (course) => {
+    setSelectedCourse(course);
+    setOpen(true);
+  };
+
+  return (
+    <Card className="p-4 shadow-md rounded-2xl">
+      <Card>
+        <h2 className="text-xl font-semibold mb-4">Courses</h2>
+        <table className="w-full border border-gray-200 rounded-md overflow-hidden">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="p-2 text-left">Code</th>
+              <th className="p-2 text-left">Name</th>
+              <th className="p-2 text-left">Shared</th>
+            </tr>
+          </thead>
+          <tbody>
+            {courses.map((course) => (
+              <tr key={course.course_code} className="border-t">
+                <td className="p-2">{course.course_code}</td>
+                <td className="p-2">{course.course_name}</td>
+                <td className="p-2">
+                  {course.shared === "yes" ? (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenPrograms(course)}
+                    >
+                      Yes (View)
+                    </Button>
+                  ) : (
+                    "No"
+                  )}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </Card>
+
+      {/* Dialog Popup */}
+      <Modal show={open} onHide={() => setOpen(false)} centered>
+        <ModalHeader closeButton>
+          <ModalTitle>
+            Programs using {selectedCourse?.course_name}
+          </ModalTitle>
+        </ModalHeader>
+        <ModalBody>
+          <div className="mt-4 space-y-2">
+            {selectedCourse?.programs?.map((p, idx) => (
+              <div
+                key={idx}
+                className="p-2 border rounded-md d-flex justify-content-between align-items-center"
+              >
+                <span>Program ID: {p.program_id}</span>
+                <span>Year: {p.year}</span>
+              </div>
+            ))}
+          </div>
+        </ModalBody>
+      </Modal>
+    </Card>
+  );
+}
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("courses");
@@ -29,6 +114,8 @@ const AdminDashboard = () => {
   const [programs, setPrograms] = useState([]);
   const [editIndex, setEditIndex] = useState({});
   const [loading, setLoading] = useState(true);
+  const [showProgramsModal, setShowProgramsModal] = useState(false);
+  const [selectedCourseForModal, setSelectedCourseForModal] = useState(null);
 
   // Fetch data from backend
   useEffect(() => {
@@ -73,6 +160,7 @@ const AdminDashboard = () => {
     fetchData();
   }, []);
 
+  // Form management functions
   const toggleForm = (tab, index = null) => {
     setFormVisible((prev) => ({ ...prev, [tab]: !prev[tab] }));
     setEditIndex((prev) => ({ ...prev, [tab]: index }));
@@ -109,6 +197,7 @@ const AdminDashboard = () => {
     }));
   };
 
+  // Program/Year pair management for courses
   const addProgramYearPair = () => {
     const currentProgramYears = formData.courses?.programYears || [];
     const newProgramYears = [...currentProgramYears, { program: "", year: "1" }];
@@ -130,12 +219,13 @@ const AdminDashboard = () => {
     handleInputChange("courses", "programYears", currentProgramYears);
   };
 
+  // Form submission
   const handleFormSubmit = async (tab) => {
     try {
       let updatedCourses = null;
       let updatedClassrooms = null;
+      
       if (tab === "courses") {
-        // Create or update course
         const payload = {
           code: formData.courses?.code || "",
           name: formData.courses?.name || "",
@@ -145,25 +235,21 @@ const AdminDashboard = () => {
         if (response.status !== 'success') {
           throw new Error(response.error || 'Failed to save course');
         }
-        // Use updated courses from backend response
         updatedCourses = Array.isArray(response.courses) ? response.courses.map(c => ({
           name: c.course_name,
           code: c.course_code,
           programYears: c.programs || []
         })) : [];
       } else {
-        // Create or update classroom
         const payload = {
             id: formData[tab]?.id || "",
             capacity: Number(formData[tab]?.capacity) || 0,
-            locked: formData[tab]?.locked === "Yes" ? 1 : 0,
-            school_id: 1
+            locked: formData[tab]?.locked === "Yes" ? 1 : 0
         }
         const response = await addClass(payload);
         if (response.status !== 'success') {
           throw new Error(response.error || 'Failed to save classroom');
         }
-        // Use updated classrooms from backend response
         updatedClassrooms = Array.isArray(response.classrooms) ? response.classrooms.map(r => ({
           id: r.room_id,
           capacity: r.capacity,
@@ -187,6 +273,7 @@ const AdminDashboard = () => {
     }
   };
 
+  // Delete functionality
   const handleDelete = async (tab, idx) => {
     if (window.confirm("Are you sure you want to delete this entry?")) {
       try {
@@ -206,7 +293,6 @@ const AdminDashboard = () => {
 
         const result = await response.json();
         if (result.status === 'success') {
-          // Refresh data
           const newData = {...data};
           newData[tab] = newData[tab].filter((_, i) => i !== idx);
           setData(newData);
@@ -220,6 +306,18 @@ const AdminDashboard = () => {
     }
   };
 
+  // Handler to open modal for programs sharing a course
+  const handleShowProgramsModal = (course) => {
+    setSelectedCourseForModal(course);
+    setShowProgramsModal(true);
+  };
+
+  // Helper function to determine if course is shared
+  const isCourseShared = (course) => {
+    return course.programYears && course.programYears.length > 1;
+  };
+
+  // Render program/year inputs for course form
   const renderProgramYearInputs = () => {
     const programYears = formData.courses?.programYears || [];
     
@@ -230,7 +328,6 @@ const AdminDashboard = () => {
         )}
         {programYears.map((pair, idx) => (
           <div key={idx} className="flex gap-2 mb-2 items-center">
-            {/* Program search input with datalist */}
             <div className="flex-grow">
               <input
                 type="text"
@@ -250,7 +347,6 @@ const AdminDashboard = () => {
               </datalist>
             </div>
             
-            {/* Year select */}
             <select
               className="input border rounded px-2 py-1"
               value={pair.year}
@@ -263,7 +359,6 @@ const AdminDashboard = () => {
               <option value="4">Fourth Year</option>
             </select>
             
-            {/* Remove button (only show if more than 1 pair) */}
             {programYears.length > 1 && (
               <button
                 type="button"
@@ -276,7 +371,6 @@ const AdminDashboard = () => {
           </div>
         ))}
         
-        {/* Add another program/year button */}
         <button
           type="button"
           className="btn bg-blue-500 text-white px-3 py-1 rounded mt-2"
@@ -288,6 +382,7 @@ const AdminDashboard = () => {
     );
   };
 
+  // Render form based on tab
   const renderForm = (tab) => (
     <form
       className="form-container flex flex-col gap-2 mb-4"
@@ -346,7 +441,6 @@ const AdminDashboard = () => {
         }
       })}
       
-      {/* Special handling for courses - show program/year inputs */}
       {tab === "courses" && renderProgramYearInputs()}
       
       <button
@@ -418,14 +512,9 @@ const AdminDashboard = () => {
                     </th>
                   ))}
                   {tab === "courses" && (
-                    <>
-                      <th className="text-left px-4 py-2 font-semibold text-gray-700">
-                        Programs
-                      </th>
-                      <th className="text-left px-4 py-2 font-semibold text-gray-700">
-                        Years
-                      </th>
-                    </>
+                    <th className="text-left px-4 py-2 font-semibold text-gray-700">
+                      Shared?
+                    </th>
                   )}
                   <th className="text-left px-4 py-2 font-semibold text-gray-700">
                     Actions
@@ -436,7 +525,7 @@ const AdminDashboard = () => {
                 {data[tab].length === 0 ? (
                   <tr>
                     <td
-                      colSpan={tabFields[tab].length + (tab === "courses" ? 3 : 1)}
+                      colSpan={tabFields[tab].length + (tab === "courses" ? 2 : 1)}
                       className="text-center text-gray-500 italic py-6"
                     >
                       No {tab} found. Add some data to get started.
@@ -468,20 +557,18 @@ const AdminDashboard = () => {
                         </td>
                       ))}
                       
-                      {/* Show programs and years for courses */}
+                      {/* Show shared status for courses */}
                       {tab === "courses" && (
-                        <>
-                          <td className="px-4 py-3 align-middle">
-                            {entry.programYears && entry.programYears.length > 0
-                              ? entry.programYears.map((py) => py.program).join(", ")
-                              : <span className="text-gray-500 italic">Not Assigned</span>}
-                          </td>
-                          <td className="px-4 py-3 align-middle">
-                            {entry.programYears && entry.programYears.length > 0
-                              ? entry.programYears.map((py) => py.year).join(", ")
-                              : <span className="text-gray-500 italic">Not Assigned</span>}
-                          </td>
-                        </>
+                        <td className="px-4 py-3 align-middle">
+  <Button
+    variant="outline"
+    size="sm"
+    onClick={() => handleShowProgramsModal(entry)}
+    style={{ padding: "2px 8px", fontSize: "0.95em" }}
+  >
+    {isCourseShared(entry) ? "Yes" : "No"}
+  </Button>
+</td>
                       )}
                       
                       <td className="px-4 py-3 flex gap-2">
@@ -497,6 +584,15 @@ const AdminDashboard = () => {
                         >
                           Delete
                         </button>
+                        {/* {tab === "courses" && (
+                          <Button
+                            variant="outline-primary"
+                            size="sm"
+                            onClick={() => handleShowProgramsModal(entry)}
+                          >
+                            View Programs
+                          </Button>
+                        )} */}
                       </td>
                     </tr>
                   ))
@@ -506,6 +602,27 @@ const AdminDashboard = () => {
           </div>
         </div>
       ))}
+
+      {/* Programs Modal */}
+      <Modal show={showProgramsModal} onHide={() => setShowProgramsModal(false)} centered>
+  <ModalHeader closeButton>
+    <ModalTitle>
+      Programs using {selectedCourseForModal?.course_name}
+    </ModalTitle>
+  </ModalHeader>
+  <ModalBody>
+    {Array.isArray(selectedCourseForModal?.programs) && selectedCourseForModal.programs.length > 0 ? (
+      selectedCourseForModal.programs.map((p, idx) => (
+        <div key={idx} className="mb-2 p-2 border rounded d-flex justify-content-between align-items-center">
+          <span>Program ID: {p.program_id}</span>
+          <span>Year: {p.year}</span>
+        </div>
+      ))
+    ) : (
+      <div>No programs found for this course.</div>
+    )}
+  </ModalBody>
+</Modal>
     </div>
   );
 };
