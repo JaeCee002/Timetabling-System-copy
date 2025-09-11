@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import 'bootstrap/dist/css/bootstrap.min.css';
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import 'bootstrap/dist/css/bootstrap.min.css';
 import "./dash.css";
 import { Button } from "react-bootstrap";
 import { 
@@ -13,6 +16,7 @@ import {
 import { Card } from "react-bootstrap";
 import { Modal, ModalBody, ModalHeader, ModalTitle } from "react-bootstrap";
 
+const tabs = ["courses", "classrooms"];
 const tabs = ["courses", "classrooms"];
 
 const tabFields = {
@@ -105,10 +109,12 @@ export function CoursesTable() {
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("courses");
+  const [activeTab, setActiveTab] = useState("courses");
   const [formVisible, setFormVisible] = useState({});
   const [formData, setFormData] = useState({});
   const [data, setData] = useState({
     courses: [],
+    classrooms: []
     classrooms: []
   });
   const [programs, setPrograms] = useState([]);
@@ -117,6 +123,7 @@ const AdminDashboard = () => {
   const [showProgramsModal, setShowProgramsModal] = useState(false);
   const [selectedCourseForModal, setSelectedCourseForModal] = useState(null);
 
+  // Fetch data from backend
   // Fetch data from backend
   useEffect(() => {
     const fetchData = async () => {
@@ -164,6 +171,7 @@ const AdminDashboard = () => {
   const toggleForm = (tab, index = null) => {
     setFormVisible((prev) => ({ ...prev, [tab]: !prev[tab] }));
     setEditIndex((prev) => ({ ...prev, [tab]: index }));
+
 
     if (index !== null && data[tab][index]) {
       setFormData((prev) => ({
@@ -467,7 +475,23 @@ const AdminDashboard = () => {
       </div>
 
       <h1 className="text-3xl font-bold mb-6">Admin Dashboard - Data Management</h1>
+      <h1 className="text-3xl font-bold mb-6">Admin Dashboard - Data Management</h1>
 
+      <div className="tabs mb-6 flex gap-3">
+        {tabs.map((tab) => (
+          <button
+            key={tab}
+            className={`tab-btn px-5 py-2 rounded font-semibold transition-colors ${
+              activeTab === tab
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+            }`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+          </button>
+        ))}
+      </div>
       <div className="tabs mb-6 flex gap-3">
         {tabs.map((tab) => (
           <button
@@ -575,10 +599,13 @@ const AdminDashboard = () => {
                         <button
                           className="btn bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
                           onClick={() => toggleForm(tab, idx)}
+                          className="btn bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
+                          onClick={() => toggleForm(tab, idx)}
                         >
                           Edit
                         </button>
                         <button
+                          className="btn bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
                           className="btn bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
                           onClick={() => handleDelete(tab, idx)}
                         >

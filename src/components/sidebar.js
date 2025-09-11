@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Draggable } from "@fullcalendar/interaction";
 import { useNavigate } from "react-router-dom";
 import "./sidebar.css";
-import { fetchCourses, fetchPrograms, fetchSchools } from "../api/timetableAPI";
+import { fetchPrograms, fetchSchools } from "../api/timetableAPI";
 import { useAuth } from "./AuthContext";
 
 const CourseButton = ({ course }) => {
@@ -49,11 +49,8 @@ const Sidebar = ({ onSchoolSelect, onProgramSelect, onYearSelect }) => {
 
     fetchSchools(university)
       .then(data => {
-        // If API returns a single school as a string
         if (typeof data.schools === 'string') {
           setSchools([{ school_id: 1, school_name: data.schools }]);
-        } else {
-          // setSchools(data.schools); // Old code for multiple schools
         }
       })
       .catch(err => console.error("School fetch error:", err));
@@ -68,13 +65,32 @@ const Sidebar = ({ onSchoolSelect, onProgramSelect, onYearSelect }) => {
       .catch(err => console.error("Program fetch error:", err));
   }, [selectedSchool]);
 
-  // Fetch courses when program AND year are selected
+  // Fetch courses from admin backend when program AND year are selected
   useEffect(() => {
     if (!selectedProgram || !selectedYear) return;
 
-    fetchCourses(selectedProgram, selectedYear)
-      .then(data => setCourses(data.courses))
-      .catch(err => console.error("Courses fetch error:", err));
+    // Fetch courses from the admin endpoint
+    fetch('/admin.php?action=getCourses')
+      .then(res => {
+        if (!res.ok) throw new Error('Network response was not ok');
+        return res.json();
+      })
+      .then(data => {
+        if (data.status === 'success' && Array.isArray(data.courses)) {
+          // Filter courses by program and year if needed (adjust based on your data structure)
+          // This assumes courses have program_id and year fields - modify as needed
+          const filteredCourses = data.courses.filter(course => 
+            course.program_id == selectedProgram && course.year == selectedYear
+          );
+          setCourses(filteredCourses.length ? filteredCourses : data.courses);
+        } else {
+          setCourses([]);
+        }
+      })
+      .catch(err => {
+        console.error("Courses fetch error:", err);
+        setCourses([]);
+      });
   }, [selectedProgram, selectedYear]);
 
   // Setup draggable
@@ -89,7 +105,7 @@ const Sidebar = ({ onSchoolSelect, onProgramSelect, onYearSelect }) => {
         },
       });
     }
-  }, []);
+  }, [courses]); // Re-initialize when courses change
 
   const handleSchoolChange = (e) => {
     const value = e.target.value;
@@ -105,10 +121,7 @@ const Sidebar = ({ onSchoolSelect, onProgramSelect, onYearSelect }) => {
     setSelectedProgram(value);
     setSelectedYear("");
     setCourses([]);
-    // Find the selected program object
     const selected = programs.find(p => p.program_id === parseInt(value));
-    console.log("Sidebar debug:", { value, selected, programs });
-    // Pass both ID and name to parent
     onProgramSelect?.(value, selected ? selected.program_name : "");
   };
 
@@ -190,9 +203,18 @@ const Sidebar = ({ onSchoolSelect, onProgramSelect, onYearSelect }) => {
 
       <h2>Courses</h2>
       <div className="course-list">
-        {(courses || []).map((course) => (
-          <CourseButton key={course.course_code || course.course_code} course={course} />
-        ))}
+        {courses.length > 0 ? (
+          courses.map((course) => (
+            <CourseButton 
+              key={course.course_code} 
+              course={course} 
+            />
+          ))
+        ) : (
+          <p className="no-courses-message">
+            {selectedProgram && selectedYear ? "No courses found" : "Select program and year"}
+          </p>
+        )}
       </div>
 
       {<button
