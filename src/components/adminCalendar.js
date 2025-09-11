@@ -629,20 +629,8 @@ const convertSuggestedSlots = (suggestedSlots) => {
 
 // Cleanup function
 const clearSuggestions = () => {
-<<<<<<< Updated upstream
-  // Remove from DOM
-  if (calendarApi) {
-    calendarApi.getEvents()
-      .filter(e => e.extendedProps?.isSuggestion)
-      .forEach(e => e.remove());
-  }
-  
-  // Remove from state
-  setEvents(prev => prev.filter(e => !e.extendedProps?.isSuggestion));
-=======
   //setEvents(prev => prev.filter(e => !e.extendedProps?.isSuggestion));
-  setBackgroundEvents([]);
->>>>>>> Stashed changes
+  //setBackgroundEvents([]);
   setSuggestedSlots([]);
 };
 

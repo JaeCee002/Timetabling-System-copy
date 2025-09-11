@@ -4,16 +4,17 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import "./dash.css";
 import { Button } from "react-bootstrap";
 import { 
-  fetchCourses,
+  fetchAllCourses,
   fetchClassrooms,
-  fetchPrograms,
-  fetchSchools,
+  fetchAllPrograms,
+  addCourse,
+  addClass,
 } from "../api/timetableAPI"; 
 
 const tabs = ["courses", "classrooms"];
 
 const tabFields = {
-  courses: ["name", "code", "year"],  // Added year field
+  courses: ["name", "code"],
   classrooms: ["id", "capacity", "locked"]
 };
 
@@ -25,6 +26,7 @@ const AdminDashboard = () => {
     courses: [],
     classrooms: []
   });
+  const [programs, setPrograms] = useState([]);
   const [editIndex, setEditIndex] = useState({});
   const [loading, setLoading] = useState(true);
 
@@ -32,8 +34,12 @@ const AdminDashboard = () => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        // Fetch programs first
+        const programsData = await fetchAllPrograms();
+        setPrograms(Array.isArray(programsData?.programs) ? programsData.programs : []);
+
         // Fetch courses
-        const coursesData = await fetchCourses();
+        const coursesData = await fetchAllCourses();
         
         // Fetch classrooms
         const classroomsData = await fetchClassrooms();
@@ -43,10 +49,10 @@ const AdminDashboard = () => {
             coursesData.courses.map(c => ({
               name: c.course_name,
               code: c.course_code,
-              year: c.year || "1"
+              programYears: c.programs || []
             })) : [],
-          classrooms: Array.isArray(classroomsData?.classrooms) ? 
-            classroomsData.classrooms.map(r => ({
+          classrooms: Array.isArray(classroomsData?.classes) ? 
+            classroomsData.classes.map(r => ({
               id: r.room_id,
               capacity: r.capacity,
               locked: r.locked ? "Yes" : "No"
@@ -77,10 +83,19 @@ const AdminDashboard = () => {
         [tab]: { ...data[tab][index] }
       }));
     } else {
-      setFormData((prev) => ({
-        ...prev,
-        [tab]: {}
-      }));
+      if (tab === "courses") {
+        setFormData((prev) => ({
+          ...prev,
+          [tab]: {
+            programYears: []
+          }
+        }));
+      } else {
+        setFormData((prev) => ({
+          ...prev,
+          [tab]: {}
+        }));
+      }
     }
   };
 
@@ -94,72 +109,78 @@ const AdminDashboard = () => {
     }));
   };
 
-    const handleFormSubmit = async (tab) => {
+  const addProgramYearPair = () => {
+    const currentProgramYears = formData.courses?.programYears || [];
+    const newProgramYears = [...currentProgramYears, { program: "", year: "1" }];
+    handleInputChange("courses", "programYears", newProgramYears);
+  };
+
+  const removeProgramYearPair = (index) => {
+    const currentProgramYears = formData.courses?.programYears || [];
+    const newProgramYears = currentProgramYears.filter((_, i) => i !== index);
+    handleInputChange("courses", "programYears", newProgramYears);
+  };
+
+  const updateProgramYearPair = (index, field, value) => {
+    const currentProgramYears = [...(formData.courses?.programYears || [])];
+    currentProgramYears[index] = {
+      ...currentProgramYears[index],
+      [field]: value
+    };
+    handleInputChange("courses", "programYears", currentProgramYears);
+  };
+
+  const handleFormSubmit = async (tab) => {
     try {
+      let updatedCourses = null;
+      let updatedClassrooms = null;
       if (tab === "courses") {
         // Create or update course
-        const response = await fetch('/admin.php?action=addCourse', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            code: formData[tab]?.code || "",
-            name: formData[tab]?.name || "",
-            year: formData[tab]?.year || "1"
-          })
-        });
-        
-        const result = await response.json();
-        if (result.status !== 'success') {
-          throw new Error(result.error || 'Failed to save course');
+        const payload = {
+          code: formData.courses?.code || "",
+          name: formData.courses?.name || "",
+          programYears: formData.courses?.programYears || []
         }
+        const response = await addCourse(payload);
+        if (response.status !== 'success') {
+          throw new Error(response.error || 'Failed to save course');
+        }
+        // Use updated courses from backend response
+        updatedCourses = Array.isArray(response.courses) ? response.courses.map(c => ({
+          name: c.course_name,
+          code: c.course_code,
+          programYears: c.programs || []
+        })) : [];
       } else {
         // Create or update classroom
-        const response = await fetch('/admin.php?action=addClass', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
+        const payload = {
             id: formData[tab]?.id || "",
             capacity: Number(formData[tab]?.capacity) || 0,
             locked: formData[tab]?.locked === "Yes" ? 1 : 0,
             school_id: 1
-          })
-        });
-        
-        const result = await response.json();
-        if (result.status !== 'success') {
-          throw new Error(result.error || 'Failed to save classroom');
         }
+        const response = await addClass(payload);
+        if (response.status !== 'success') {
+          throw new Error(response.error || 'Failed to save classroom');
+        }
+        // Use updated classrooms from backend response
+        updatedClassrooms = Array.isArray(response.classrooms) ? response.classrooms.map(r => ({
+          id: r.room_id,
+          capacity: r.capacity,
+          locked: r.locked ? "Yes" : "No"
+        })) : [];
       }
 
-      // Refresh data
-      const [newCoursesData, newClassroomsData] = await Promise.all([
-        fetchCourses(),
-        fetchClassrooms()
-      ]);
-      
-      setData({
-        courses: Array.isArray(newCoursesData?.courses) ? 
-          newCoursesData.courses.map(c => ({
-            name: c.course_name,
-            code: c.course_code,
-            year: c.year || "1"
-          })) : [],
-        classrooms: Array.isArray(newClassroomsData?.classrooms) ? 
-          newClassroomsData.classrooms.map(r => ({
-            id: r.room_id,
-            capacity: r.capacity,
-            locked: r.locked ? "Yes" : "No"
-          })) : []
-      });
-      
+      // Update state with new lists from backend
+      setData(prev => ({
+        ...prev,
+        courses: updatedCourses !== null ? updatedCourses : prev.courses,
+        classrooms: updatedClassrooms !== null ? updatedClassrooms : prev.classrooms
+      }));
+
       setFormVisible((prev) => ({ ...prev, [tab]: false }));
       setEditIndex((prev) => ({ ...prev, [tab]: null }));
       setFormData((prev) => ({ ...prev, [tab]: {} }));
-      
     } catch (error) {
       console.error('Error submitting form:', error);
       alert(`Error: ${error.message}`);
@@ -199,6 +220,74 @@ const AdminDashboard = () => {
     }
   };
 
+  const renderProgramYearInputs = () => {
+    const programYears = formData.courses?.programYears || [];
+    
+    return (
+      <div className="program-years-section mb-4">
+        {programYears.length > 0 && (
+          <label className="mb-2 font-medium block">Programs and Years</label>
+        )}
+        {programYears.map((pair, idx) => (
+          <div key={idx} className="flex gap-2 mb-2 items-center">
+            {/* Program search input with datalist */}
+            <div className="flex-grow">
+              <input
+                type="text"
+                list={`programOptions-${idx}`}
+                placeholder="Search Program..."
+                className="input border rounded px-2 py-1 w-full"
+                value={pair.program}
+                onChange={(e) => updateProgramYearPair(idx, "program", e.target.value)}
+                required
+              />
+              <datalist id={`programOptions-${idx}`}>
+                {programs
+                  .filter(p => p.program_name.toLowerCase().includes(pair.program.toLowerCase()))
+                  .map((p, i) => (
+                    <option key={i} value={p.program_name} />
+                  ))}
+              </datalist>
+            </div>
+            
+            {/* Year select */}
+            <select
+              className="input border rounded px-2 py-1"
+              value={pair.year}
+              onChange={(e) => updateProgramYearPair(idx, "year", e.target.value)}
+              required
+            >
+              <option value="1">First Year</option>
+              <option value="2">Second Year</option>
+              <option value="3">Third Year</option>
+              <option value="4">Fourth Year</option>
+            </select>
+            
+            {/* Remove button (only show if more than 1 pair) */}
+            {programYears.length > 1 && (
+              <button
+                type="button"
+                className="btn bg-red-500 text-white px-2 py-1 rounded"
+                onClick={() => removeProgramYearPair(idx)}
+              >
+                ×
+              </button>
+            )}
+          </div>
+        ))}
+        
+        {/* Add another program/year button */}
+        <button
+          type="button"
+          className="btn bg-blue-500 text-white px-3 py-1 rounded mt-2"
+          onClick={addProgramYearPair}
+        >
+          {programYears.length > 0 ? "+ Add Another Program/Year" : "+ Add Program/Year"}
+        </button>
+      </div>
+    );
+  };
+
   const renderForm = (tab) => (
     <form
       className="form-container flex flex-col gap-2 mb-4"
@@ -220,23 +309,6 @@ const AdminDashboard = () => {
               >
                 <option value="Yes">Yes</option>
                 <option value="No">No</option>
-              </select>
-            </div>
-          );
-        } else if (field === "year") {
-          return (
-            <div key={index} className="flex flex-col">
-              <label className="mb-1 font-medium">Year</label>
-              <select
-                className="input border rounded px-2 py-1"
-                value={formData[tab]?.[field] || "1"}
-                onChange={(e) => handleInputChange(tab, field, e.target.value)}
-                required
-              >
-                <option value="1">First Year</option>
-                <option value="2">Second Year</option>
-                <option value="3">Third Year</option>
-                <option value="4">Fourth Year</option>
               </select>
             </div>
           );
@@ -273,6 +345,10 @@ const AdminDashboard = () => {
           );
         }
       })}
+      
+      {/* Special handling for courses - show program/year inputs */}
+      {tab === "courses" && renderProgramYearInputs()}
+      
       <button
         type="submit"
         className="btn submit bg-blue-600 text-white px-4 py-1 rounded mt-2"
@@ -289,7 +365,7 @@ const AdminDashboard = () => {
   }
 
   return (
-    <div className="admin-panel p-4 max-w-4xl mx-auto">
+    <div className="admin-panel p-4 max-w-6xl mx-auto">
       <div className="mb-4">
         <Link to="/adminCalendar">
           <Button variant="secondary">← Back to Main Page</Button>
@@ -322,7 +398,7 @@ const AdminDashboard = () => {
             className="btn bg-green-600 text-white px-4 py-2 rounded mb-4"
             onClick={() => toggleForm(tab)}
           >
-            Add New
+            Add New {tab.slice(0, -1)}
           </button>
 
           {formVisible[tab] && renderForm(tab)}
@@ -338,10 +414,19 @@ const AdminDashboard = () => {
                     >
                       {field === "id" ? "Classroom ID" : 
                        field === "code" ? "Course Code" : 
-                       field === "year" ? "Year" :
                        field.charAt(0).toUpperCase() + field.slice(1)}
                     </th>
                   ))}
+                  {tab === "courses" && (
+                    <>
+                      <th className="text-left px-4 py-2 font-semibold text-gray-700">
+                        Programs
+                      </th>
+                      <th className="text-left px-4 py-2 font-semibold text-gray-700">
+                        Years
+                      </th>
+                    </>
+                  )}
                   <th className="text-left px-4 py-2 font-semibold text-gray-700">
                     Actions
                   </th>
@@ -351,10 +436,10 @@ const AdminDashboard = () => {
                 {data[tab].length === 0 ? (
                   <tr>
                     <td
-                      colSpan={tabFields[tab].length + 1}
+                      colSpan={tabFields[tab].length + (tab === "courses" ? 3 : 1)}
                       className="text-center text-gray-500 italic py-6"
                     >
-                      No data yet.
+                      No {tab} found. Add some data to get started.
                     </td>
                   </tr>
                 ) : (
@@ -369,21 +454,36 @@ const AdminDashboard = () => {
                           className="px-4 py-3 align-middle"
                           style={{ minWidth: field === "capacity" ? "100px" : "auto" }}
                         >
-                          {field === "year" ? (
-                            `Year ${entry[field]}`
-                          ) : field === "locked" ? (
+                          {field === "locked" ? (
                             entry[field] === "Yes" ? (
                               <span className="flex items-center gap-1 text-green-600 font-semibold">
                                 Locked
                               </span>
                             ) : (
-                              <span className="text-gray-500 italic">No</span>
+                              <span className="text-gray-500 italic">Unlocked</span>
                             )
                           ) : (
                             entry[field]
                           )}
                         </td>
                       ))}
+                      
+                      {/* Show programs and years for courses */}
+                      {tab === "courses" && (
+                        <>
+                          <td className="px-4 py-3 align-middle">
+                            {entry.programYears && entry.programYears.length > 0
+                              ? entry.programYears.map((py) => py.program).join(", ")
+                              : <span className="text-gray-500 italic">Not Assigned</span>}
+                          </td>
+                          <td className="px-4 py-3 align-middle">
+                            {entry.programYears && entry.programYears.length > 0
+                              ? entry.programYears.map((py) => py.year).join(", ")
+                              : <span className="text-gray-500 italic">Not Assigned</span>}
+                          </td>
+                        </>
+                      )}
+                      
                       <td className="px-4 py-3 flex gap-2">
                         <button
                           className="btn bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"

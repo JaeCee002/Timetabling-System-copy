@@ -31,6 +31,20 @@ export const fetchLecturers = async() => {
     return response.data;
 }
 
+export const fetchAllPrograms = async() => {
+    const response = await axios.post("/programs", {
+        params: {},
+    });
+    return response.data;
+}
+
+export const fetchAllCourses = async() => {
+    const response = await axios.get("/courses", {
+        params: {},
+    });
+    return response.data;
+}
+
 export const fetchClassrooms = async() => {
     const response = await axios.get("/timetable/classes", {
         params: {},
@@ -138,3 +152,20 @@ export const unrollbackTimetable = async (program, year) => {
     });
     return response.data;
 };
+
+export const addClass = async(payload) => {
+    try {
+    const response = await axios.post('/add_class', payload);
+    return response.data;
+  } catch (error) {
+    console.error('Error addding classroom:', error);
+    throw error;
+  }
+}
+
+export const addCourse = async() => {
+    const response = await axios.post("/add_course", {
+        params: {},
+    });
+    return response.data;
+}
