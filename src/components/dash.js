@@ -17,7 +17,6 @@ import { Card } from "react-bootstrap";
 import { Modal, ModalBody, ModalHeader, ModalTitle } from "react-bootstrap";
 
 const tabs = ["courses", "classrooms"];
-const tabs = ["courses", "classrooms"];
 
 const tabFields = {
   courses: ["name", "code"],
@@ -109,12 +108,10 @@ export function CoursesTable() {
 
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("courses");
-  const [activeTab, setActiveTab] = useState("courses");
   const [formVisible, setFormVisible] = useState({});
   const [formData, setFormData] = useState({});
   const [data, setData] = useState({
     courses: [],
-    classrooms: []
     classrooms: []
   });
   const [programs, setPrograms] = useState([]);
@@ -599,13 +596,10 @@ const AdminDashboard = () => {
                         <button
                           className="btn bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
                           onClick={() => toggleForm(tab, idx)}
-                          className="btn bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
-                          onClick={() => toggleForm(tab, idx)}
                         >
                           Edit
                         </button>
                         <button
-                          className="btn bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
                           className="btn bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
                           onClick={() => handleDelete(tab, idx)}
                         >
