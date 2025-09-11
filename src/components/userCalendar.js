@@ -24,7 +24,7 @@ function UserCalendar() {
   }, []);
 
   return (
-    <div style={{ position: "relative" }}>
+    <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>
       {/* Profile at top right */}
       <div style={{
         position: 'absolute',
@@ -33,7 +33,7 @@ function UserCalendar() {
         zIndex: 1000,
       }}>
         <UserAccount userRole="user" />
-      </div>
+      </div> 
       <div style={{
         position: "absolute",
         bottom: "10px",

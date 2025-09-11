@@ -100,7 +100,7 @@ const handleEditSave = () => {
 };
 
 return (
-  <div className="container ms-10" style={{ marginLeft: '13rem', position: "relative" }}>
+  <div className="container ms-10" style={{ marginLeft: 'auto', marginRight: 'auto', position: "relative" }}>
     {alert.show && (
       <div className="delete-zone"
         style={{
@@ -386,5 +386,5 @@ return (
     </div>
   </div>
 );
-}
+};
 export default MyCalendar;

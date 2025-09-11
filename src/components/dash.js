@@ -1,58 +1,76 @@
-import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
-import { fetchPendingUsers, updatePendingUser } from "../api/timetableAPI";
-import { useAuth} from "./AuthContext";
+import React, { useState, useEffect } from "react";
+import { Link } from "react-router-dom";
+import 'bootstrap/dist/css/bootstrap.min.css';
 import "./dash.css";
+import { Button } from "react-bootstrap";
+import { 
+  fetchCourses,
+  fetchClassrooms,
+  fetchPrograms,
+  fetchSchools,
+} from "../api/timetableAPI"; 
 
-const tabs = ["departments", "programs", "courses", "lecturers", "classrooms"];
+const tabs = ["courses", "classrooms"];
 
 const tabFields = {
-  departments: ["Department Name"],
-  programs: ["Program Name"],
-  courses: ["Course Name", "Course Code (e.g. CS120)"],
-  lecturers: ["Lecturer Name", "Lecturer ID or Email"],
-  classrooms: ["Classroom Name or Code"]
+  courses: ["name", "code", "year"],  // Added year field
+  classrooms: ["id", "capacity", "locked"]
 };
 
 const AdminDashboard = () => {
-  const {isAuthenticated} = useAuth();
-
-  const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
-  const defaultTab = searchParams.get("tab") || "departments";
-  const [activeTab, setActiveTab] = useState(defaultTab);
+  const [activeTab, setActiveTab] = useState("courses");
   const [formVisible, setFormVisible] = useState({});
   const [formData, setFormData] = useState({});
   const [data, setData] = useState({
-    departments: [],
-    programs: [],
     courses: [],
-    lecturers: [],
-    classrooms: [],
+    classrooms: []
   });
   const [editIndex, setEditIndex] = useState({});
+  const [loading, setLoading] = useState(true);
 
-  const [pendingUsers, setPendingUsers] = useState([]);
-  const [selectedRoles, setSelectedRoles] = useState({});
-
+  // Fetch data from backend
   useEffect(() => {
-    if (!isAuthenticated) return;
-    fetchPendingUsers()
-      .then((data) => {
-        const formatted = data.users;
-        setPendingUsers(formatted);
-      })
-      .catch((err) => console.error("Failed to fetch pending users:", err));
-  }, [isAuthenticated]);
+    const fetchData = async () => {
+      try {
+        // Fetch courses
+        const coursesData = await fetchCourses();
+        
+        // Fetch classrooms
+        const classroomsData = await fetchClassrooms();
+        
+        setData({
+          courses: Array.isArray(coursesData?.courses) ? 
+            coursesData.courses.map(c => ({
+              name: c.course_name,
+              code: c.course_code,
+              year: c.year || "1"
+            })) : [],
+          classrooms: Array.isArray(classroomsData?.classrooms) ? 
+            classroomsData.classrooms.map(r => ({
+              id: r.room_id,
+              capacity: r.capacity,
+              locked: r.locked ? "Yes" : "No"
+            })) : []
+        });
+      } catch (error) {
+        console.error("Error fetching data:", error);
+        alert(`Error loading data: ${error.message}`);
+        setData({
+          courses: [],
+          classrooms: []
+        });
+      } finally {
+        setLoading(false);
+      }
+    };
 
-
-  useEffect(() => {
-    setSearchParams({ tab: activeTab });
-  }, [activeTab, setSearchParams]);
+    fetchData();
+  }, []);
 
   const toggleForm = (tab, index = null) => {
     setFormVisible((prev) => ({ ...prev, [tab]: !prev[tab] }));
     setEditIndex((prev) => ({ ...prev, [tab]: index }));
+
     if (index !== null && data[tab][index]) {
       setFormData((prev) => ({
         ...prev,
@@ -76,250 +94,319 @@ const AdminDashboard = () => {
     }));
   };
 
-  const handleFormSubmit = (tab) => {
-    const fields = tabFields[tab];
-    const entry = {};
-    fields.forEach((placeholder, i) => {
-      entry[placeholder] = formData[tab]?.[placeholder] || "";
-    });
-
-    if (editIndex[tab] !== undefined && editIndex[tab] !== null) {
-      setData((prev) => ({
-        ...prev,
-        [tab]: prev[tab].map((item, idx) =>
-          idx === editIndex[tab] ? entry : item
-        )
-      }));
-    } else {
-      setData((prev) => ({
-        ...prev,
-        [tab]: [...prev[tab], entry]
-      }));
-    }
-    setFormVisible((prev) => ({ ...prev, [tab]: false }));
-    setEditIndex((prev) => ({ ...prev, [tab]: null }));
-    setFormData((prev) => ({ ...prev, [tab]: {} }));
-  };
-
-  const handleEdit = (tab, idx) => {
-    toggleForm(tab, idx);
-  };
-
-  const handleDelete = (tab, idx) => {
-    if (window.confirm("Are you sure you want to delete this entry?")) {
-      setData((prev) => ({
-        ...prev,
-        [tab]: prev[tab].filter((_, i) => i !== idx)
-      }));
-    }
-  };
-
-  const renderForm = (tab) => {
-    return (
-      <form
-        className="form-container flex flex-col gap-2 mb-2"
-        onSubmit={e => {
-          e.preventDefault();
-          handleFormSubmit(tab);
-        }}
-      >
-        {tabFields[tab].map((placeholder, index) => (
-          <div key={index} className="flex flex-col">
-            <label htmlFor={`${tab}-${placeholder}`} className="mb-1 font-medium">
-              {placeholder}
-            </label>
-            <input
-              id={`${tab}-${placeholder}`}
-              type="text"
-              placeholder={placeholder}
-              className="input border rounded px-2 py-1"
-              value={formData[tab]?.[placeholder] || ""}
-              onChange={e => handleInputChange(tab, placeholder, e.target.value)}
-              required
-            />
-          </div>
-        ))}
-        <button
-          type="submit"
-          className="btn submit bg-blue-600 text-white px-4 py-1 rounded mt-2"
-        >
-          {editIndex[tab] !== undefined && editIndex[tab] !== null ? "Update" : "Submit"}
-        </button>
-      </form>
-    );
-  };
-
-  const handleRoleChange = (userId, role) => {
-    setSelectedRoles((prev) => ({ ...prev, [userId]: role }));
-  };
-
-  const handleSetRole = (userId) => {
-    const role = selectedRoles[userId];
-    if (!role) return alert("Please select a role.");
-
-    updatePendingUser(userId, role)
-      .then((res) => {
-        if (res.status !== 'success') throw new Error("Failed to set role");
-        fetchPendingUsers()
-          .then((data) => {
-            const formatted = data.users;
-            setPendingUsers(formatted);
+    const handleFormSubmit = async (tab) => {
+    try {
+      if (tab === "courses") {
+        // Create or update course
+        const response = await fetch('/admin.php?action=addCourse', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            code: formData[tab]?.code || "",
+            name: formData[tab]?.name || "",
+            year: formData[tab]?.year || "1"
           })
-          .catch((err) => console.error("Failed to fetch pending users:", err));
-      })
-      .catch((err) => {
-        console.error("Role set error:", err);
-        alert("Failed to set role.");
+        });
+        
+        const result = await response.json();
+        if (result.status !== 'success') {
+          throw new Error(result.error || 'Failed to save course');
+        }
+      } else {
+        // Create or update classroom
+        const response = await fetch('/admin.php?action=addClass', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            id: formData[tab]?.id || "",
+            capacity: Number(formData[tab]?.capacity) || 0,
+            locked: formData[tab]?.locked === "Yes" ? 1 : 0,
+            school_id: 1
+          })
+        });
+        
+        const result = await response.json();
+        if (result.status !== 'success') {
+          throw new Error(result.error || 'Failed to save classroom');
+        }
+      }
+
+      // Refresh data
+      const [newCoursesData, newClassroomsData] = await Promise.all([
+        fetchCourses(),
+        fetchClassrooms()
+      ]);
+      
+      setData({
+        courses: Array.isArray(newCoursesData?.courses) ? 
+          newCoursesData.courses.map(c => ({
+            name: c.course_name,
+            code: c.course_code,
+            year: c.year || "1"
+          })) : [],
+        classrooms: Array.isArray(newClassroomsData?.classrooms) ? 
+          newClassroomsData.classrooms.map(r => ({
+            id: r.room_id,
+            capacity: r.capacity,
+            locked: r.locked ? "Yes" : "No"
+          })) : []
       });
+      
+      setFormVisible((prev) => ({ ...prev, [tab]: false }));
+      setEditIndex((prev) => ({ ...prev, [tab]: null }));
+      setFormData((prev) => ({ ...prev, [tab]: {} }));
+      
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      alert(`Error: ${error.message}`);
+    }
   };
 
+  const handleDelete = async (tab, idx) => {
+    if (window.confirm("Are you sure you want to delete this entry?")) {
+      try {
+        const item = data[tab][idx];
+        const endpoint = tab === "courses" ? "deleteCourse" : "deleteClassroom";
+        const key = tab === "courses" ? "code" : "id";
+        
+        const response = await fetch(`/admin.php?action=${endpoint}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            [key]: item[key]
+          })
+        });
+
+        const result = await response.json();
+        if (result.status === 'success') {
+          // Refresh data
+          const newData = {...data};
+          newData[tab] = newData[tab].filter((_, i) => i !== idx);
+          setData(newData);
+        } else {
+          alert('Error: ' + (result.error || 'Failed to delete'));
+        }
+      } catch (error) {
+        console.error('Error deleting item:', error);
+        alert('Failed to delete item');
+      }
+    }
+  };
+
+  const renderForm = (tab) => (
+    <form
+      className="form-container flex flex-col gap-2 mb-4"
+      onSubmit={(e) => {
+        e.preventDefault();
+        handleFormSubmit(tab);
+      }}
+    >
+      {tabFields[tab].map((field, index) => {
+        if (field === "locked") {
+          return (
+            <div key={index} className="flex flex-col">
+              <label className="mb-1 font-medium">Locked</label>
+              <select
+                className="input border rounded px-2 py-1"
+                value={formData[tab]?.[field] || "No"}
+                onChange={(e) => handleInputChange(tab, field, e.target.value)}
+                required
+              >
+                <option value="Yes">Yes</option>
+                <option value="No">No</option>
+              </select>
+            </div>
+          );
+        } else if (field === "year") {
+          return (
+            <div key={index} className="flex flex-col">
+              <label className="mb-1 font-medium">Year</label>
+              <select
+                className="input border rounded px-2 py-1"
+                value={formData[tab]?.[field] || "1"}
+                onChange={(e) => handleInputChange(tab, field, e.target.value)}
+                required
+              >
+                <option value="1">First Year</option>
+                <option value="2">Second Year</option>
+                <option value="3">Third Year</option>
+                <option value="4">Fourth Year</option>
+              </select>
+            </div>
+          );
+        } else if (field === "capacity") {
+          return (
+            <div key={index} className="flex flex-col">
+              <label className="mb-1 font-medium">Capacity</label>
+              <input
+                type="number"
+                min={1}
+                className="input border rounded px-2 py-1"
+                value={formData[tab]?.[field] || ""}
+                onChange={(e) => handleInputChange(tab, field, e.target.value)}
+                required
+              />
+            </div>
+          );
+        } else {
+          const label = field === "id" ? "Classroom ID" : 
+                      field === "code" ? "Course Code" : 
+                      field.charAt(0).toUpperCase() + field.slice(1);
+          return (
+            <div key={index} className="flex flex-col">
+              <label className="mb-1 font-medium">{label}</label>
+              <input
+                type="text"
+                placeholder={label}
+                className="input border rounded px-2 py-1"
+                value={formData[tab]?.[field] || ""}
+                onChange={(e) => handleInputChange(tab, field, e.target.value)}
+                required
+              />
+            </div>
+          );
+        }
+      })}
+      <button
+        type="submit"
+        className="btn submit bg-blue-600 text-white px-4 py-1 rounded mt-2"
+      >
+        {editIndex[tab] !== undefined && editIndex[tab] !== null
+          ? "Update"
+          : "Submit"}
+      </button>
+    </form>
+  );
+
+  if (loading) {
+    return <div className="p-4 text-center">Loading data...</div>;
+  }
 
   return (
-    <>
-      {/* Back button outside the dashboard, top left */}
-      <button
-        className="btn bg-blue-600 text-white px-4 py-2 rounded"
-        onClick={() => navigate("/adminCalendar")}
-        style={{
-          position: "fixed",
-          top: "20px",
-          left: "20px",
-          zIndex: 1000
-        }}
-      >
-        ← Back to Main Page
-      </button>
+    <div className="admin-panel p-4 max-w-4xl mx-auto">
+      <div className="mb-4">
+        <Link to="/adminCalendar">
+          <Button variant="secondary">← Back to Main Page</Button>
+        </Link>
+      </div>
 
-      {pendingUsers.length > 0 && (
-        <div className="pending-users p-4 border border-gray-400 rounded mb-4">
-          <h2 className="text-xl font-bold mb-2">Pending User Role Assignments</h2>
-          <table className="min-w-full">
-            <thead>
-              <tr>
-                <th className="px-2 py-1 text-left">Email</th>
-                <th className="px-2 py-1 text-left">Assign Role</th>
-                <th className="px-2 py-1 text-left">Action</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pendingUsers.map((user) => (
-                <tr key={user.id} className="border-t">
-                  <td className="px-2 py-1">{user.email}</td>
-                  <td className="px-2 py-1">
-                    <select
-                      className="border px-2 py-1 rounded"
-                      value={selectedRoles[user.user_id] || ""}
-                      onChange={(e) => handleRoleChange(user.user_id, e.target.value)}
-                    >
-                      <option value="">Select Role</option>
-                      <option value="admin">Admin</option>
-                      <option value="lecturer">Lecturer</option>
-                      <option value="student">Student</option>
-                    </select>
-                  </td>
-                  <td className="px-2 py-1">
-                    <button
-                      className="btn bg-blue-600 text-white px-3 py-1 rounded"
-                      onClick={() => handleSetRole(user.user_id)}
-                    >
-                      Set Role
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+      <h1 className="text-3xl font-bold mb-6">Admin Dashboard - Data Management</h1>
 
-
-      <div className="admin-panel p-4">
-        <h1 className="text-2xl font-bold mb-4">Admin Dashboard - Data Management</h1>
-
-        <div className="tabs mb-4 flex gap-2">
-          {tabs.map((tab) => (
-            <a
-              key={tab}
-              href={`?tab=${tab}`}
-              className={`tab-btn px-4 py-2 rounded ${activeTab === tab ? 'bg-blue-600 text-white' : 'bg-gray-200 text-black'}`}
-              onClick={(e) => {
-                e.preventDefault();
-                setActiveTab(tab);
-              }}
-            >
-              {tab.charAt(0).toUpperCase() + tab.slice(1)}
-            </a>
-          ))}
-        </div>
-
+      <div className="tabs mb-6 flex gap-3">
         {tabs.map((tab) => (
-          <div key={tab} className={`tab-content ${activeTab === tab ? 'block' : 'hidden'}`}>
-            <h2 className="text-xl font-semibold mb-2 capitalize">{tab}</h2>
-            <div className="actions mb-2 flex gap-2">
-              <button
-                className="btn bg-green-600 text-white px-3 py-1 rounded"
-                onClick={() => toggleForm(tab)}
-              >
-                Add New
-              </button>
-            </div>
-            {formVisible[tab] && renderForm(tab)}
-            <div className="placeholder border border-dashed border-gray-400 p-4 mt-2">
-              <table className="min-w-full">
-                <thead>
+          <button
+            key={tab}
+            className={`tab-btn px-5 py-2 rounded font-semibold transition-colors ${
+              activeTab === tab
+                ? "bg-blue-600 text-white"
+                : "bg-gray-200 text-gray-800 hover:bg-gray-300"
+            }`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab.charAt(0).toUpperCase() + tab.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {tabs.map((tab) => (
+        <div key={tab} className={activeTab === tab ? "block" : "hidden"}>
+          <h2 className="text-2xl font-semibold mb-4 capitalize">{tab}</h2>
+
+          <button
+            className="btn bg-green-600 text-white px-4 py-2 rounded mb-4"
+            onClick={() => toggleForm(tab)}
+          >
+            Add New
+          </button>
+
+          {formVisible[tab] && renderForm(tab)}
+
+          <div className="overflow-x-auto border border-gray-300 rounded shadow">
+            <table className="min-w-full table-auto">
+              <thead className="bg-gray-100">
+                <tr>
+                  {tabFields[tab].map((field, idx) => (
+                    <th
+                      key={idx}
+                      className="text-left px-4 py-2 font-semibold text-gray-700"
+                    >
+                      {field === "id" ? "Classroom ID" : 
+                       field === "code" ? "Course Code" : 
+                       field === "year" ? "Year" :
+                       field.charAt(0).toUpperCase() + field.slice(1)}
+                    </th>
+                  ))}
+                  <th className="text-left px-4 py-2 font-semibold text-gray-700">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {data[tab].length === 0 ? (
                   <tr>
-                    {tabFields[tab].map((field, idx) => (
-                      <th key={idx} className="px-2 py-1 text-left">{field}</th>
-                    ))}
-                    <th className="px-2 py-1 text-left">Actions</th>
+                    <td
+                      colSpan={tabFields[tab].length + 1}
+                      className="text-center text-gray-500 italic py-6"
+                    >
+                      No data yet.
+                    </td>
                   </tr>
-                </thead>
-                <tbody>
-                  {data[tab].length === 0 && (
-                    <tr>
-                      <td colSpan={tabFields[tab].length + 1} className="text-gray-500 italic">
-                        No data yet.
-                      </td>
-                    </tr>
-                  )}
-                  {data[tab].map((entry, idx) => (
-                    <tr key={idx} className="border-t">
+                ) : (
+                  data[tab].map((entry, idx) => (
+                    <tr
+                      key={idx}
+                      className={idx % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                    >
                       {tabFields[tab].map((field, fidx) => (
                         <td
                           key={fidx}
-                          className="px-4 py-2 font-bold text-xl text-white bg-blue-700 rounded shadow"
-                          style={{
-                            letterSpacing: "1px",
-                            border: "2px solid #2563eb",
-                            background: "#2563eb"
-                          }}
+                          className="px-4 py-3 align-middle"
+                          style={{ minWidth: field === "capacity" ? "100px" : "auto" }}
                         >
-                          {entry[field]}
+                          {field === "year" ? (
+                            `Year ${entry[field]}`
+                          ) : field === "locked" ? (
+                            entry[field] === "Yes" ? (
+                              <span className="flex items-center gap-1 text-green-600 font-semibold">
+                                Locked
+                              </span>
+                            ) : (
+                              <span className="text-gray-500 italic">No</span>
+                            )
+                          ) : (
+                            entry[field]
+                          )}
                         </td>
                       ))}
-                      <td className="px-2 py-1 flex gap-1">
+                      <td className="px-4 py-3 flex gap-2">
                         <button
-                          className="btn bg-yellow-500 text-white px-2 py-1 rounded text-sm"
-                          onClick={() => handleEdit(tab, idx)}
+                          className="btn bg-yellow-500 hover:bg-yellow-600 text-white px-3 py-1 rounded"
+                          onClick={() => toggleForm(tab, idx)}
                         >
                           Edit
                         </button>
                         <button
-                          className="btn bg-red-600 text-white px-2 py-1 rounded text-sm"
+                          className="btn bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded"
                           onClick={() => handleDelete(tab, idx)}
                         >
                           Delete
                         </button>
                       </td>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                  ))
+                )}
+              </tbody>
+            </table>
           </div>
-        ))}
-      </div>
-    </>
+        </div>
+      ))}
+    </div>
   );
 };
 

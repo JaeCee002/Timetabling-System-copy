@@ -84,7 +84,7 @@ const UserAccount = ({ userRole = "admin" }) => {
             </div>
             <div
               onClick={handleSwitchAccount}
-              onMouseOver={(e) => e.target.style.backgroundColor = '#f8f9fa'}
+              onMouseOver={(e) => e.target.style.backgroundColor = '#6d9ccaff'}
               onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
               style={{ padding: '12px 16px', cursor: 'pointer', fontSize: '14px' }}
             >
@@ -92,11 +92,19 @@ const UserAccount = ({ userRole = "admin" }) => {
             </div>
             <div
               onClick={handleLogout}
-              onMouseOver={(e) => e.target.style.backgroundColor = '#f8f9fa'}
+              onMouseOver={(e) => e.target.style.backgroundColor = '#6d9ccaff'}
               onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
               style={{ padding: '12px 16px', cursor: 'pointer', fontSize: '14px' }}
             >
               🚪 Logout
+            </div>
+            <div
+              onClick={() => navigate("/dash")}
+              onMouseOver={(e) => e.target.style.backgroundColor = '#6d9ccaff'}
+              onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+              style={{ padding: '12px 16px', cursor: 'pointer', fontSize: '14px' }}
+            >
+              Dashboard
             </div>
           </div>
         )}
