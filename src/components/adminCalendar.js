@@ -718,6 +718,7 @@ const clearSuggestions = () => {
                 top: '10px',
                 right: '20px',
                 zIndex: 1000,
+                
                 //     width: '40px', // Fixed width
                 //     height: '40px', // Fixed height to match width
                 //     borderRadius: '0%', // This makes it circular
@@ -854,41 +855,52 @@ const clearSuggestions = () => {
             </div>
 
 
-            <MyCalendar
-                events={events}
-                onEventAdd={handleEventAdd}
-                onEventUpdate={handleEventUpdate}
-                onEventDelete={handleEventDelete}
-                onEventRemove={handleEventRemove}
-                draggedEvents={draggedEvents}
-                isAdmin={true}
-                onClashDetected={(clash) => {
-                    if (clash.type === "remove") {
-                        // Remove clash entry for this event
-                        setClashEvents(prev => prev.filter(e => e.eventId !== clash.eventId));
-                        setPersistentConflicts(prev => prev.filter(e => e.eventId !== clash.eventId)); // <-- Clear persistentConflicts too
-                    } else if (clash.type === "update") {
-                        // Update or add clash entry
-                        setClashEvents(prev => {
-                            const existingIndex = prev.findIndex(e => e.eventId === clash.eventId);
-                            if (existingIndex >= 0) {
-                                return prev.map(e => e.eventId === clash.eventId ? clash : e);
-                            } else {
-                                return [...prev, clash];
-                            }
-                        });
-                        setPersistentConflicts(prev => {
-                            const existingIndex = prev.findIndex(e => e.eventId === clash.eventId);
-                            if (existingIndex >= 0) {
-                                return prev.map(e => e.eventId === clash.eventId ? clash : e);
-                            } else {
-                                return [...prev, clash];
-                            }
-                        });
-                    }
-                }}
-            />
-
+            {/* Wrap MyCalendar in a div with left margin for admin view */}
+            <div
+  style={{
+    flexGrow: 1,
+    marginLeft: '240px',
+    marginTop: '50px',
+    height: '100vh',
+    overflow: 'hidden',
+    paddingRight: '20px' // Optional padding for right spacing
+  }}
+>
+                <MyCalendar
+                    events={events}
+                    onEventAdd={handleEventAdd}
+                    onEventUpdate={handleEventUpdate}
+                    onEventDelete={handleEventDelete}
+                    onEventRemove={handleEventRemove}
+                    draggedEvents={draggedEvents}
+                    isAdmin={true}
+                    onClashDetected={(clash) => {
+                        if (clash.type === "remove") {
+                            // Remove clash entry for this event
+                            setClashEvents(prev => prev.filter(e => e.eventId !== clash.eventId));
+                            setPersistentConflicts(prev => prev.filter(e => e.eventId !== clash.eventId)); // <-- Clear persistentConflicts too
+                        } else if (clash.type === "update") {
+                            // Update or add clash entry
+                            setClashEvents(prev => {
+                                const existingIndex = prev.findIndex(e => e.eventId === clash.eventId);
+                                if (existingIndex >= 0) {
+                                    return prev.map(e => e.eventId === clash.eventId ? clash : e);
+                                } else {
+                                    return [...prev, clash];
+                                }
+                            });
+                            setPersistentConflicts(prev => {
+                                const existingIndex = prev.findIndex(e => e.eventId === clash.eventId);
+                                if (existingIndex >= 0) {
+                                    return prev.map(e => e.eventId === clash.eventId ? clash : e);
+                                } else {
+                                    return [...prev, clash];
+                                }
+                            });
+                        }
+                    }}
+                />
+            </div>
 
 
             {/* Styled Modal for assigning lecturer and classroom */}

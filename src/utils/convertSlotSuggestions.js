@@ -31,6 +31,10 @@ export function convertSuggestedSlots(suggestedSlots, referenceMonday = "2025-06
       startTime: slot.start_time,
       endTime: slot.end_time,
       duration: slot.duration,
+      display: 'background',
+      backgroundColor: 'rgba(40, 167, 69, 0.2)',
+      borderColor: '#28a745',
+      classNames: ['suggested-slot-highlight'],  
       extendedProps: {
         type: 'suggested_slot',
         day: slot.day,

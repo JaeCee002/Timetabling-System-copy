@@ -216,6 +216,14 @@ const Sidebar = ({ onSchoolSelect, onProgramSelect, onYearSelect }) => {
           </p>
         )}
       </div>
+
+      {<button
+        className="admin-dashboard-btn"
+        style={{ marginTop: "2rem", width: "100%" }}
+        onClick={() => navigate("/dash")}
+      >
+        Admin Dashboard
+      </button> }
     </div>
   );
 };
