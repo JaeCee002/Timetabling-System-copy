@@ -163,9 +163,12 @@ export const addClass = async(payload) => {
   }
 }
 
-export const addCourse = async() => {
-    const response = await axios.post("/add_course", {
-        params: {},
-    });
+export const addCourse = async(payload) => {
+    try {
+    const response = await axios.post('/add_course', payload);
     return response.data;
+  } catch (error) {
+    console.error('Error addding course:', error);
+    throw error;
+  }
 }
