@@ -1,9 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import 'bootstrap/dist/css/bootstrap.min.css';
-import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import 'bootstrap/dist/css/bootstrap.min.css';
 import "./dash.css";
 import { Button } from "react-bootstrap";
 import { 
@@ -73,6 +70,13 @@ export function CoursesTable() {
                     </Button>
                   ) : (
                     "No"
+                    (<Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleOpenPrograms(course)}
+                    >
+                      No (View)
+                    </Button>)
                   )}
                 </td>
               </tr>
@@ -120,12 +124,11 @@ const AdminDashboard = () => {
   const [showProgramsModal, setShowProgramsModal] = useState(false);
   const [selectedCourseForModal, setSelectedCourseForModal] = useState(null);
 
-  // Fetch data from backend
-  // Fetch data from backend
+ 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        // Fetch programs first
+        // Fetch programs
         const programsData = await fetchAllPrograms();
         setPrograms(Array.isArray(programsData?.programs) ? programsData.programs : []);
 
@@ -232,10 +235,16 @@ const AdminDashboard = () => {
       
       if (tab === "courses") {
         const payload = {
-          code: formData.courses?.code || "",
-          name: formData.courses?.name || "",
-          programYears: formData.courses?.programYears || []
-        }
+  code: formData.courses?.code || "",
+  course: formData.courses?.name || "",
+  programs: Object.fromEntries(
+    (formData.courses?.programYears || []).map(pair => [
+      pair.program,
+      parseInt(pair.year, 10)
+    ])
+  )
+};
+
         const response = await addCourse(payload);
         if (response.status !== 'success') {
           throw new Error(response.error || 'Failed to save course');
@@ -377,12 +386,15 @@ const AdminDashboard = () => {
         ))}
         
         <button
-          type="button"
-          className="btn bg-blue-500 text-white px-3 py-1 rounded mt-2"
-          onClick={addProgramYearPair}
-        >
-          {programYears.length > 0 ? "+ Add Another Program/Year" : "+ Add Program/Year"}
-        </button>
+  type="button"
+  className="btn btn-primary rounded px-4 py-2 shadow-sm fw-semibold"
+  onClick={addProgramYearPair}
+>
+  <i className="bi bi-plus-lg me-2"></i>
+  {programYears.length > 0 ? "Add Another Program/Year" : "Add Program/Year"}
+</button>
+
+
       </div>
     );
   };
@@ -472,23 +484,6 @@ const AdminDashboard = () => {
       </div>
 
       <h1 className="text-3xl font-bold mb-6">Admin Dashboard - Data Management</h1>
-      <h1 className="text-3xl font-bold mb-6">Admin Dashboard - Data Management</h1>
-
-      <div className="tabs mb-6 flex gap-3">
-        {tabs.map((tab) => (
-          <button
-            key={tab}
-            className={`tab-btn px-5 py-2 rounded font-semibold transition-colors ${
-              activeTab === tab
-                ? "bg-blue-600 text-white"
-                : "bg-gray-200 text-gray-800 hover:bg-gray-300"
-            }`}
-            onClick={() => setActiveTab(tab)}
-          >
-            {tab.charAt(0).toUpperCase() + tab.slice(1)}
-          </button>
-        ))}
-      </div>
       <div className="tabs mb-6 flex gap-3">
         {tabs.map((tab) => (
           <button
@@ -605,15 +600,6 @@ const AdminDashboard = () => {
                         >
                           Delete
                         </button>
-                        {/* {tab === "courses" && (
-                          <Button
-                            variant="outline-primary"
-                            size="sm"
-                            onClick={() => handleShowProgramsModal(entry)}
-                          >
-                            View Programs
-                          </Button>
-                        )} */}
                       </td>
                     </tr>
                   ))
