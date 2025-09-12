@@ -20,96 +20,6 @@ const tabFields = {
   classrooms: ["id", "capacity", "locked"]
 };
 
-// Separate CoursesTable component
-export function CoursesTable() {
-  const [courses, setCourses] = useState([]);
-  const [open, setOpen] = useState(false);
-  const [selectedCourse, setSelectedCourse] = useState(null);
-
-  useEffect(() => {
-    fetch("/admin/fetchAllCourses")
-      .then((res) => res.json())
-      .then((data) => {
-        if (data.status === "success") {
-          setCourses(data.courses);
-        }
-      })
-      .catch((err) => console.error("Error fetching courses:", err));
-  }, []);
-
-  const handleOpenPrograms = (course) => {
-    setSelectedCourse(course);
-    setOpen(true);
-  };
-
-  return (
-    <Card className="p-4 shadow-md rounded-2xl">
-      <Card>
-        <h2 className="text-xl font-semibold mb-4">Courses</h2>
-        <table className="w-full border border-gray-200 rounded-md overflow-hidden">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="p-2 text-left">Code</th>
-              <th className="p-2 text-left">Name</th>
-              <th className="p-2 text-left">Shared</th>
-            </tr>
-          </thead>
-          <tbody>
-            {courses.map((course) => (
-              <tr key={course.course_code} className="border-t">
-                <td className="p-2">{course.course_code}</td>
-                <td className="p-2">{course.course_name}</td>
-                <td className="p-2">
-                  {course.shared === "yes" ? (
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleOpenPrograms(course)}
-                    >
-                      Yes (View)
-                    </Button>
-                  ) : (
-                    "No"
-                    (<Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleOpenPrograms(course)}
-                    >
-                      No (View)
-                    </Button>)
-                  )}
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </Card>
-
-      {/* Dialog Popup */}
-      <Modal show={open} onHide={() => setOpen(false)} centered>
-        <ModalHeader closeButton>
-          <ModalTitle>
-            Programs using {selectedCourse?.course_name}
-          </ModalTitle>
-        </ModalHeader>
-        <ModalBody>
-          <div className="mt-4 space-y-2">
-            {selectedCourse?.programs?.map((p, idx) => (
-              <div
-                key={idx}
-                className="p-2 border rounded-md d-flex justify-content-between align-items-center"
-              >
-                <span>Program ID: {p.program_id}</span>
-                <span>Year: {p.year}</span>
-              </div>
-            ))}
-          </div>
-        </ModalBody>
-      </Modal>
-    </Card>
-  );
-}
-
 const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState("courses");
   const [formVisible, setFormVisible] = useState({});
@@ -124,7 +34,7 @@ const AdminDashboard = () => {
   const [showProgramsModal, setShowProgramsModal] = useState(false);
   const [selectedCourseForModal, setSelectedCourseForModal] = useState(null);
 
- 
+  // Fetch data from backend
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -167,11 +77,35 @@ const AdminDashboard = () => {
     fetchData();
   }, []);
 
+  // Function to refresh data after successful operations
+  const refreshData = async () => {
+    try {
+      const coursesData = await fetchAllCourses();
+      const classroomsData = await fetchClassrooms();
+      
+      setData({
+        courses: Array.isArray(coursesData?.courses) ? 
+          coursesData.courses.map(c => ({
+            name: c.course_name,
+            code: c.course_code,
+            programYears: c.programs || []
+          })) : [],
+        classrooms: Array.isArray(classroomsData?.classes) ? 
+          classroomsData.classes.map(r => ({
+            id: r.room_id,
+            capacity: r.capacity,
+            locked: r.locked ? "Yes" : "No"
+          })) : []
+      });
+    } catch (error) {
+      console.error("Error refreshing data:", error);
+    }
+  };
+
   // Form management functions
   const toggleForm = (tab, index = null) => {
     setFormVisible((prev) => ({ ...prev, [tab]: !prev[tab] }));
     setEditIndex((prev) => ({ ...prev, [tab]: index }));
-
 
     if (index !== null && data[tab][index]) {
       setFormData((prev) => ({
@@ -230,53 +164,37 @@ const AdminDashboard = () => {
   // Form submission
   const handleFormSubmit = async (tab) => {
     try {
-      let updatedCourses = null;
-      let updatedClassrooms = null;
-      
       if (tab === "courses") {
         const payload = {
-  code: formData.courses?.code || "",
-  course: formData.courses?.name || "",
-  programs: Object.fromEntries(
-    (formData.courses?.programYears || []).map(pair => [
-      pair.program,
-      parseInt(pair.year, 10)
-    ])
-  )
-};
+          code: formData.courses?.code || "",
+          course: formData.courses?.name || "",
+          programs: Object.fromEntries(
+            (formData.courses?.programYears || []).map(pair => [
+              pair.program,
+              parseInt(pair.year, 10)
+            ])
+          )
+        };
 
         const response = await addCourse(payload);
         if (response.status !== 'success') {
           throw new Error(response.error || 'Failed to save course');
         }
-        updatedCourses = Array.isArray(response.courses) ? response.courses.map(c => ({
-          name: c.course_name,
-          code: c.course_code,
-          programYears: c.programs || []
-        })) : [];
       } else {
         const payload = {
-            id: formData[tab]?.id || "",
-            capacity: Number(formData[tab]?.capacity) || 0,
-            locked: formData[tab]?.locked === "Yes" ? 1 : 0
-        }
+          id: formData[tab]?.id || "",
+          capacity: Number(formData[tab]?.capacity) || 0,
+          locked: formData[tab]?.locked === "Yes" ? 1 : 0
+        };
+        
         const response = await addClass(payload);
         if (response.status !== 'success') {
           throw new Error(response.error || 'Failed to save classroom');
         }
-        updatedClassrooms = Array.isArray(response.classrooms) ? response.classrooms.map(r => ({
-          id: r.room_id,
-          capacity: r.capacity,
-          locked: r.locked ? "Yes" : "No"
-        })) : [];
       }
 
-      // Update state with new lists from backend
-      setData(prev => ({
-        ...prev,
-        courses: updatedCourses !== null ? updatedCourses : prev.courses,
-        classrooms: updatedClassrooms !== null ? updatedClassrooms : prev.classrooms
-      }));
+      // Refresh data after successful submission
+      await refreshData();
 
       setFormVisible((prev) => ({ ...prev, [tab]: false }));
       setEditIndex((prev) => ({ ...prev, [tab]: null }));
@@ -307,9 +225,7 @@ const AdminDashboard = () => {
 
         const result = await response.json();
         if (result.status === 'success') {
-          const newData = {...data};
-          newData[tab] = newData[tab].filter((_, i) => i !== idx);
-          setData(newData);
+          await refreshData();
         } else {
           alert('Error: ' + (result.error || 'Failed to delete'));
         }
@@ -386,15 +302,12 @@ const AdminDashboard = () => {
         ))}
         
         <button
-  type="button"
-  className="btn btn-primary rounded px-4 py-2 shadow-sm fw-semibold"
-  onClick={addProgramYearPair}
->
-  <i className="bi bi-plus-lg me-2"></i>
-  {programYears.length > 0 ? "Add Another Program/Year" : "Add Program/Year"}
-</button>
-
-
+          type="button"
+          className="btn btn-primary rounded px-4 py-2 shadow-sm fw-semibold"
+          onClick={addProgramYearPair}
+        >
+          {programYears.length > 0 ? "Add Another Program/Year" : "Add Program/Year"}
+        </button>
       </div>
     );
   };
@@ -484,6 +397,7 @@ const AdminDashboard = () => {
       </div>
 
       <h1 className="text-3xl font-bold mb-6">Admin Dashboard - Data Management</h1>
+      
       <div className="tabs mb-6 flex gap-3">
         {tabs.map((tab) => (
           <button
@@ -576,15 +490,15 @@ const AdminDashboard = () => {
                       {/* Show shared status for courses */}
                       {tab === "courses" && (
                         <td className="px-4 py-3 align-middle">
-  <Button
-    variant="outline"
-    size="sm"
-    onClick={() => handleShowProgramsModal(entry)}
-    style={{ padding: "2px 8px", fontSize: "0.95em" }}
-  >
-    {isCourseShared(entry) ? "Yes" : "No"}
-  </Button>
-</td>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleShowProgramsModal(entry)}
+                            style={{ padding: "2px 8px", fontSize: "0.95em" }}
+                          >
+                            {isCourseShared(entry) ? "Yes" : "No"}
+                          </Button>
+                        </td>
                       )}
                       
                       <td className="px-4 py-3 flex gap-2">
@@ -612,24 +526,24 @@ const AdminDashboard = () => {
 
       {/* Programs Modal */}
       <Modal show={showProgramsModal} onHide={() => setShowProgramsModal(false)} centered>
-  <ModalHeader closeButton>
-    <ModalTitle>
-      Programs using {selectedCourseForModal?.course_name}
-    </ModalTitle>
-  </ModalHeader>
-  <ModalBody>
-    {Array.isArray(selectedCourseForModal?.programs) && selectedCourseForModal.programs.length > 0 ? (
-      selectedCourseForModal.programs.map((p, idx) => (
-        <div key={idx} className="mb-2 p-2 border rounded d-flex justify-content-between align-items-center">
-          <span>Program ID: {p.program_id}</span>
-          <span>Year: {p.year}</span>
-        </div>
-      ))
-    ) : (
-      <div>No programs found for this course.</div>
-    )}
-  </ModalBody>
-</Modal>
+        <ModalHeader closeButton>
+          <ModalTitle>
+            Programs using {selectedCourseForModal?.name}
+          </ModalTitle>
+        </ModalHeader>
+        <ModalBody>
+          {Array.isArray(selectedCourseForModal?.programYears) && selectedCourseForModal.programYears.length > 0 ? (
+            selectedCourseForModal.programYears.map((py, idx) => (
+              <div key={idx} className="mb-2 p-2 border rounded d-flex justify-content-between align-items-center">
+                <span>{py.program_name || py.program || 'Unknown Program'}</span>
+                <span>Year: {py.year}</span>
+              </div>
+            ))
+          ) : (
+            <div>No programs found for this course.</div>
+          )}
+        </ModalBody>
+      </Modal>
     </div>
   );
 };
