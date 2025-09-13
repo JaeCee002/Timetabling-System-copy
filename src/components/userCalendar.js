@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import MyCalendar from "./myCalendar";
+import { useAuth } from "./AuthContext";
 import { fetchUserTimetable } from "../api/timetableAPI";
 import UserAccount from "./UserAccount";
 import { convertTimetableEntry } from "../utils/convertTimetableEntry";
@@ -7,11 +8,11 @@ import { printCalendarAsPDF } from "../utils/printTimetable";
 import { Button } from "react-bootstrap";
 
 function UserCalendar() {
+  const { user } = useAuth();
   const [entries, setEntries] = useState([]);
   console.log("Entries:", entries);
 
   useEffect(() => {
-    console.log("UserCalendar mounted, fetching timetable...");
     fetchUserTimetable()
       .then((data) => {
         const formatted = data.entries
@@ -21,7 +22,7 @@ function UserCalendar() {
         setEntries(formatted);
       })
       .catch((err) => console.log("Fetch error:", err));
-  }, []);
+  }, [user]);
 
   return (
     <div style={{ position: "relative", display: "flex", justifyContent: "center", alignItems: "center", minHeight: "100vh" }}>

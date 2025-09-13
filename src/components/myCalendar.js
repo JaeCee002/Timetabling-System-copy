@@ -9,9 +9,8 @@ import { Modal, Button } from "react-bootstrap";
 import { useCalendarStore } from "./calendarStore";
 import "./myCalendar.css";
 import { fetchLecturers, fetchClassrooms, checkClash } from "../api/timetableAPI";
-
-function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit, onClashDetected,
-  mode = "admin", draggedEvents }) {
+function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit, onClashDetected, onClashClick,
+  mode = "admin", draggedEvents, conflicts = [] }) {
   const calendarRef = useRef();
   const [alert, setAlert] = useState({ show: false, message: "", x: 0, y: 0 });
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -23,6 +22,7 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit, onClashDet
   const [classrooms, setClassrooms] = useState([]);
 
   const isAdmin = mode === "admin";
+  const isLecturer = mode === "user"; // Assuming 'user' mode is for lecturers/students
 
 //making calendarRef global
 const setCalendarApi = useCalendarStore(state => state.setCalendarApi);
@@ -73,6 +73,14 @@ const showAlertAboveEvent = (info, message) => {
 };
 
 const handleEventClick = (info) => {
+  // Check if the clicked event is in the conflicts list
+  const conflict = conflicts.find(c => c.eventId === info.event.id);
+  if (conflict && onClashClick) {
+    // If it's a conflict, show the clash details modal instead of the regular one
+    onClashClick(conflict);
+    return;
+  }
+
   setSelectedEvent(info.event);
   setEditLecturer(info.event.extendedProps?.lecturer || "");
   setEditClassroom(info.event.extendedProps?.classroom || "");
@@ -91,11 +99,40 @@ const handleDelete = () => {
 const handleEditSave = () => {
   if (selectedEvent) {
     const baseTitle = selectedEvent.title.split('\n')[0];
-    const newTitle = `${baseTitle}\n(${editLecturer}, ${editClassroom})`;
+    const newTitle = getEventDisplayTitle(selectedEvent, {
+      lecturer: editLecturer,
+      classroom: editClassroom,
+    });
     selectedEvent.setProp("title", newTitle);
     selectedEvent.setExtendedProp("lecturer", editLecturer);
     selectedEvent.setExtendedProp("classroom", editClassroom);
     setShowEventModal(false);
+  }
+};
+
+// Helper to get event title based on mode
+const getEventDisplayTitle = (event, overrides = {}) => {
+  if (!event || typeof event.title !== 'string') return '';
+  // Always get the base title, which is the part before any parenthesis or newline
+  const baseTitle = event.title.split(/[\n(]/)[0].trim();
+
+  const lecturer = overrides.lecturer !== undefined ? overrides.lecturer : (event.extendedProps?.lecturer || '');
+  const classroom = overrides.classroom !== undefined ? overrides.classroom : (event.extendedProps?.classroom || '');
+
+  const formatTime = (date) => {
+    if (!date) return '';
+    return new Date(date).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  if (isLecturer) {
+    const timeString = `${formatTime(event.start)} - ${formatTime(event.end)}`;
+    return classroom ? `${baseTitle}\n(${classroom})\n${timeString}` : `${baseTitle}\n${timeString}`;
+  } else { // For admin and student views
+    return `${baseTitle}\n(${lecturer}${lecturer && classroom ? ', ' : ''}${classroom})`;
   }
 };
 
@@ -135,10 +172,10 @@ return (
         {!editMode ? (
           <>
             <div>
-              <strong>Title:</strong> {selectedEvent?.title.split('\n')[0]}
+              <strong>Title:</strong> {selectedEvent ? selectedEvent.title.split('\n')[0] : ''}
             </div>
             <div>
-              <strong>Lecturer:</strong> {selectedEvent?.extendedProps?.lecturer || "Not set"}
+              {!isLecturer && <strong>Lecturer:</strong>} {!isLecturer && (selectedEvent?.extendedProps?.lecturer || "Not set")}
             </div>
             <div>
               <strong>Classroom:</strong> {selectedEvent?.extendedProps?.classroom || "Not set"}
@@ -221,7 +258,7 @@ return (
                   whiteSpace: 'nowrap'
                 }}
               >
-                {e.title.split('\n')[0]}
+                {getEventDisplayTitle(e).split('\n')[0]}
               </div>
             ))}
           </div>
@@ -245,6 +282,9 @@ return (
           }}
           dayHeaderFormat={{
             weekday: 'short'
+          }}
+          eventContent={(arg) => {
+            return { html: getEventDisplayTitle(arg.event).replace(/\n/g, '<br/>') };
           }}
           eventClick={handleEventClick}
           eventDragStop={(info) => {
@@ -282,10 +322,16 @@ return (
             }
             if (start && end) {
               const diffMs = end.getTime() - start.getTime();
-              const maxDurationMs = 2 * 60 * 60 * 1000;
-              if (diffMs > maxDurationMs) {
-                info.revert();
-                showAlertAboveEvent(info, "✖ Maximum allowed duration is 2 hours.");
+              const maxDurationMs = 2 * 60 * 60 * 1000; // 2 hours
+
+              // Check if the event is dropped on a suggestion slot
+              const isSuggestionDrop = calendarRef.current.getApi().getEvents().some(e => 
+                e.extendedProps?.isSuggestion && new Date(e.start).getTime() === start.getTime()
+              );
+
+              if (diffMs > maxDurationMs && !isSuggestionDrop) {
+                  info.revert();
+                  showAlertAboveEvent(info, "✖ Maximum allowed duration is 2 hours.");
               }
             }
           }}
@@ -305,11 +351,34 @@ return (
               }
             }
 
+            // Check if the event is dropped onto a suggested slot
+            const isSuggestionDrop = calendarRef.current.getApi().getEvents().some(e => 
+              e.extendedProps?.isSuggestion && new Date(e.start).getTime() === start.getTime()
+            );
+
+            // If it's a valid suggestion drop, we can skip the manual clash check
+            if (isSuggestionDrop) {
+              // If dropped on a suggestion, ensure any previous clash for this event is cleared
+              if (onClashDetected) {
+                onClashDetected({ eventId: info.event.id, type: "remove" });
+              }
+              // Also remove the visual highlight from the event itself
+              info.event.setProp('classNames', '');
+              info.event.setProp('backgroundColor', '');
+              info.event.setProp('borderColor', '');
+
+              return;
+            }
+
             const lecturer_id = info.event.extendedProps?.lecturer_id;
             const classroom = info.event.extendedProps?.classroom;
 
             if (!lecturer_id || !classroom) {
               console.log("Skipping clash check — lecturer or room not assigned yet.");
+              // Even if we skip, we must notify the parent to update the state
+              if (onEventEdit) {
+                onEventEdit(info.event);
+              }
               return;
             }
 
@@ -333,6 +402,7 @@ return (
                   onClashDetected({
                     title: info.event.title,
                     message: res.message,
+                    reason: res.reason, // Pass the reason for the clash
                     eventId: info.event.id,
                     start: info.event.start,
                     end: info.event.end,
@@ -341,9 +411,8 @@ return (
                   });
                 }
 
-                return;
               } 
-              // No clash - notify parent to remove any existing clash entry
+              // No clash - notify parent to remove any existing clash entry for this event
               if (onClashDetected) {
                 onClashDetected({
                   eventId: info.event.id,
@@ -353,6 +422,11 @@ return (
 
             } catch (err) {
               console.error("Clash check error:", err);
+            } finally {
+              // Always notify the parent of the final event state after checks.
+              if (onEventEdit) {
+                onEventEdit(info.event);
+              }
             }
           }}
           height={450}
