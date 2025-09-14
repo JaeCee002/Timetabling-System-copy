@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Draggable } from "@fullcalendar/interaction";
 import { useNavigate } from "react-router-dom";
 import "./sidebar.css";
-import { fetchPrograms, fetchSchools } from "../api/timetableAPI";
+import { fetchPrograms, fetchSchools, fetchCourses } from "../api/timetableAPI";
 import { useAuth } from "./AuthContext";
 
 const CourseButton = ({ course }) => {
@@ -70,15 +70,9 @@ const Sidebar = ({ onSchoolSelect, onProgramSelect, onYearSelect }) => {
     if (!selectedProgram || !selectedYear) return;
 
     // Fetch courses from the admin endpoint
-    fetch('/admin.php?action=getCourses')
-      .then(res => {
-        if (!res.ok) throw new Error('Network response was not ok');
-        return res.json();
-      })
+    fetchCourses(selectedProgram, selectedYear)
       .then(data => {
         if (data.status === 'success' && Array.isArray(data.courses)) {
-          // Filter courses by program and year if needed (adjust based on your data structure)
-          // This assumes courses have program_id and year fields - modify as needed
           const filteredCourses = data.courses.filter(course => 
             course.program_id == selectedProgram && course.year == selectedYear
           );

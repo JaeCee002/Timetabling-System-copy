@@ -8,10 +8,10 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { Modal, Button } from "react-bootstrap";
 import { useCalendarStore } from "./calendarStore";
 import "./myCalendar.css";
+import { useAuth } from "./AuthContext";
 import { fetchLecturers, fetchClassrooms, checkClash } from "../api/timetableAPI";
-
-function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit, onClashDetected,
-  mode = "admin", draggedEvents }) {
+function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit, onClashDetected, onClashClick,
+  mode = "admin", draggedEvents, conflicts = [] }) {
   const calendarRef = useRef();
   const [alert, setAlert] = useState({ show: false, message: "", x: 0, y: 0 });
   const [selectedEvent, setSelectedEvent] = useState(null);
@@ -22,7 +22,9 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit, onClashDet
   const [lecturers, setLecturers] = useState([]);
   const [classrooms, setClassrooms] = useState([]);
 
+  const { user } = useAuth(); // Moved useAuth to the top level
   const isAdmin = mode === "admin";
+  const isUserView = mode === "user"; // This now covers both student and lecturer
 
 //making calendarRef global
 const setCalendarApi = useCalendarStore(state => state.setCalendarApi);
@@ -54,27 +56,38 @@ useEffect(() => {
 
 const showAlertAboveEvent = (info, message) => {
   const eventEl = info.el;
+  let x, y;
   if (eventEl) {
     const rect = eventEl.getBoundingClientRect();
-    setAlert({
-      show: true,
-      message,
-      x: rect.left + window.scrollX,
-      y: rect.top + window.scrollY - 40
-    });
+    x = rect.left + window.scrollX;
+    y = rect.top + window.scrollY - 60; // Move further above for visibility
+    // Ensure notification is not off-screen
+    if (y < 10) y = 10;
+    if (x < 10) x = 10;
   } else {
-    setAlert({
-      show: true,
-      message,
-      x: window.innerWidth / 2 - 100,
-      y: 100
-    });
+    // Center fallback
+    x = window.innerWidth / 2 - 150;
+    y = 60;
   }
+  setAlert({
+    show: true,
+    message,
+    x,
+    y
+  });
 };
 
 const handleEventClick = (info) => {
+  // Always check for conflict and show clash modal if present
+  const conflict = conflicts.find(c => c.eventId === info.event.id);
+  if (conflict && onClashClick) {
+    onClashClick(conflict);
+    return;
+  }
+  // If not a conflict, show normal modal
   setSelectedEvent(info.event);
-  setEditLecturer(info.event.extendedProps?.lecturer || "");
+  // Store lecturer_id for editing
+  setEditLecturer(info.event.extendedProps?.lecturer_id || "");
   setEditClassroom(info.event.extendedProps?.classroom || "");
   setShowEventModal(true);
   setEditMode(false);
@@ -90,38 +103,86 @@ const handleDelete = () => {
 
 const handleEditSave = () => {
   if (selectedEvent) {
+    // Find lecturer name from ID
+    const lecturerObj = lecturers.find(l => l.user_id === editLecturer);
+    const lecturerName = lecturerObj ? lecturerObj.name : "";
     const baseTitle = selectedEvent.title.split('\n')[0];
-    const newTitle = `${baseTitle}\n(${editLecturer}, ${editClassroom})`;
+    const newTitle = getEventDisplayTitle(user, selectedEvent, {
+      lecturer: lecturerName,
+      classroom: editClassroom,
+    });
     selectedEvent.setProp("title", newTitle);
-    selectedEvent.setExtendedProp("lecturer", editLecturer);
+    selectedEvent.setExtendedProp("lecturer", lecturerName);
+    selectedEvent.setExtendedProp("lecturer_id", editLecturer);
     selectedEvent.setExtendedProp("classroom", editClassroom);
     setShowEventModal(false);
+  }
+};
+
+// Helper to get event title based on mode
+const getEventDisplayTitle = (user, event, overrides = {}) => {
+  if (!event || typeof event.title !== 'string') return '';
+  // Always get the base title, which is the part before any parenthesis or newline
+  const baseTitle = event.title.split(/[\n(]/)[0].trim();
+
+  // Always resolve lecturer name from ID if possible
+  let lecturer = overrides.lecturer !== undefined ? overrides.lecturer : (event.extendedProps?.lecturer || '');
+  if (!lecturer && event.extendedProps?.lecturer_id && Array.isArray(lecturers)) {
+    const lecObj = lecturers.find(l => l.user_id === event.extendedProps.lecturer_id);
+    lecturer = lecObj ? lecObj.name : '';
+  }
+  const classroom = overrides.classroom !== undefined ? overrides.classroom : (event.extendedProps?.classroom || '');
+  
+  const formatTime = (date) => {
+    if (!date) return '';
+    return new Date(date).toLocaleTimeString('en-US', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true
+    });
+  };
+
+  if (isUserView && user?.role === 'lecturer') {
+    const timeString = `${formatTime(event.start)} - ${formatTime(event.end)}`;
+    const details = classroom ? `(${classroom})` : '';
+    return `${timeString}\n${baseTitle}\n${details}`;
+  } else if (isUserView && user?.role === 'student') {
+    const timeString = `${formatTime(event.start)} - ${formatTime(event.end)}`;
+    const details = `(${lecturer}${lecturer && classroom ? ', ' : ''}${classroom})`;
+    return `${timeString}\n${baseTitle}\n${details}`;
+  } else { // For admin and student views
+    return `${baseTitle}\n(${lecturer}${lecturer && classroom ? ', ' : ''}${classroom})`;
   }
 };
 
 return (
   <div className="container ms-10" style={{ marginLeft: 'auto', marginRight: 'auto', position: "relative" }}>
     {alert.show && (
-      <div className="delete-zone"
+      <div
+        className="calendar-alert"
         style={{
-          position: "absolute",
+          position: "fixed",
           left: alert.x,
           top: alert.y,
-          zIndex: 2000,
-          background: "#fff0f0",
+          zIndex: 9999,
+          background: "#fff",
           color: "#b91c1c",
-          border: "2px solid #b91c1c",
-          borderRadius: "8px",
-          padding: "10px 18px 10px 14px",
+          border: "3px solid #b91c1c",
+          borderRadius: "12px",
+          padding: "16px 24px 16px 20px",
           fontWeight: "bold",
-          boxShadow: "0 4px 16px rgba(173, 74, 74, 0.15)",
+          boxShadow: "0 8px 32px rgba(173, 74, 74, 0.25)",
+          minWidth: "260px",
+          maxWidth: "90vw",
+          textAlign: "center",
+          fontSize: "1.15rem",
           display: "flex",
           alignItems: "center",
-          minWidth: "220px",
+          gap: "12px"
         }}
       >
-        <span style={{ fontSize: "1.5rem", marginRight: "10px", color: "#b91c1c" }}>✖</span>
-        {alert.message}
+        <span style={{ fontSize: "2rem", color: "#b91c1c" }}>✖</span>
+        <span>{alert.message}</span>
       </div>
     )}
 
@@ -135,10 +196,18 @@ return (
         {!editMode ? (
           <>
             <div>
-              <strong>Title:</strong> {selectedEvent?.title.split('\n')[0]}
+              <strong>Title:</strong> {selectedEvent ? selectedEvent.title.split('\n')[0] : ''}
             </div>
             <div>
-              <strong>Lecturer:</strong> {selectedEvent?.extendedProps?.lecturer || "Not set"}
+              {!isUserView && <strong>Lecturer:</strong>} {!isUserView && (() => {
+                // Show lecturer name from ID if available
+                const lecId = selectedEvent?.extendedProps?.lecturer_id;
+                if (lecId && Array.isArray(lecturers)) {
+                  const lecObj = lecturers.find(l => l.user_id === lecId);
+                  return lecObj ? lecObj.name : "Not set";
+                }
+                return selectedEvent?.extendedProps?.lecturer || "Not set";
+              })()}
             </div>
             <div>
               <strong>Classroom:</strong> {selectedEvent?.extendedProps?.classroom || "Not set"}
@@ -221,7 +290,7 @@ return (
                   whiteSpace: 'nowrap'
                 }}
               >
-                {e.title.split('\n')[0]}
+                {getEventDisplayTitle(user, e).split('\n')[0]}
               </div>
             ))}
           </div>
@@ -245,6 +314,9 @@ return (
           }}
           dayHeaderFormat={{
             weekday: 'short'
+          }}
+          eventContent={(arg) => {
+            return { html: getEventDisplayTitle(user, arg.event).replace(/\n/g, '<br/>') };
           }}
           eventClick={handleEventClick}
           eventDragStop={(info) => {
@@ -282,10 +354,16 @@ return (
             }
             if (start && end) {
               const diffMs = end.getTime() - start.getTime();
-              const maxDurationMs = 2 * 60 * 60 * 1000;
-              if (diffMs > maxDurationMs) {
-                info.revert();
-                showAlertAboveEvent(info, "✖ Maximum allowed duration is 2 hours.");
+              const maxDurationMs = 2 * 60 * 60 * 1000; // 2 hours
+
+              // Check if the event is dropped on a suggestion slot
+              const isSuggestionDrop = calendarRef.current.getApi().getEvents().some(e => 
+                e.extendedProps?.isSuggestion && new Date(e.start).getTime() === start.getTime()
+              );
+
+              if (diffMs > maxDurationMs && !isSuggestionDrop) {
+                  info.revert();
+                  showAlertAboveEvent(info, "✖ Maximum allowed duration is 2 hours.");
               }
             }
           }}
@@ -305,11 +383,34 @@ return (
               }
             }
 
+            // Check if the event is dropped onto a suggested slot
+            const isSuggestionDrop = calendarRef.current.getApi().getEvents().some(e => 
+              e.extendedProps?.isSuggestion && new Date(e.start).getTime() === start.getTime()
+            );
+
+            // If it's a valid suggestion drop, we can skip the manual clash check
+            if (isSuggestionDrop) {
+              // If dropped on a suggestion, ensure any previous clash for this event is cleared
+              if (onClashDetected) {
+                onClashDetected({ eventId: info.event.id, type: "remove" });
+              }
+              // Also remove the visual highlight from the event itself
+              info.event.setProp('classNames', '');
+              info.event.setProp('backgroundColor', '');
+              info.event.setProp('borderColor', '');
+
+              return;
+            }
+
             const lecturer_id = info.event.extendedProps?.lecturer_id;
             const classroom = info.event.extendedProps?.classroom;
 
             if (!lecturer_id || !classroom) {
               console.log("Skipping clash check — lecturer or room not assigned yet.");
+              // Even if we skip, we must notify the parent to update the state
+              if (onEventEdit) {
+                onEventEdit(info.event);
+              }
               return;
             }
 
@@ -326,13 +427,13 @@ return (
               const res = await checkClash(payload);
 
               if (res.status === "failure") {
-                //window.alert(`${res.message}`);
-                //showAlertAboveEvent(info, `✖ Clash: ${res.message}`);
-
+                // Always show clash notification every time a conflict is detected
+                  window.alert(`Clash: ${res.message}`);
                 if (onClashDetected) {
                   onClashDetected({
                     title: info.event.title,
                     message: res.message,
+                    reason: res.reason, // Pass the reason for the clash
                     eventId: info.event.id,
                     start: info.event.start,
                     end: info.event.end,
@@ -340,19 +441,28 @@ return (
                     timeSlot: `${info.event.start.toLocaleTimeString()} - ${info.event.end.toLocaleTimeString()}, ${info.event.start.toLocaleDateString("en-US", { weekday: "long" })}`
                   });
                 }
+              } else {
+                // No clash - notify parent to remove any existing clash entry for this event
+                if (onClashDetected) {
+                  onClashDetected({
+                    eventId: info.event.id,
+                    type: "remove" // Indicates we should remove any clash for this event
+                  });
+                }
+              }
 
-                return;
-              } 
-              // No clash - notify parent to remove any existing clash entry
-              if (onClashDetected) {
-                onClashDetected({
-                  eventId: info.event.id,
-                  type: "remove" // Indicates we should remove any clash for this event
-                });
+              // After drag-and-drop, refresh highlight for conflicts (for Show Conflicts button)
+              if (typeof window.refreshConflictHighlights === 'function') {
+                window.refreshConflictHighlights();
               }
 
             } catch (err) {
               console.error("Clash check error:", err);
+            } finally {
+              // Always notify the parent of the final event state after checks.
+              if (onEventEdit) {
+                onEventEdit(info.event);
+              }
             }
           }}
           height={450}

@@ -27,6 +27,8 @@ export default function AdminCalendar() {
     // Lock state for class
     const [isClassLocked, setIsClassLocked] = useState(false);
     const [lockLoading, setLockLoading] = useState(false);
+    // Feedback notification for lock/unlock
+    const [lockFeedback, setLockFeedback] = useState({ show: false, message: '', variant: 'info' });
 
     // Check lock status on mount/login/refresh
     useEffect(() => {
@@ -56,16 +58,18 @@ export default function AdminCalendar() {
                 res = await lockClass();
                 if (res && res.status === "success") {
                     setIsClassLocked(true);
+                    setLockFeedback({ show: true, message: "Class locked successfully.", variant: "success" });
                 } else {
-                    alert("Failed to lock class. Server did not return success.");
+                    setLockFeedback({ show: true, message: "Failed to lock class. Server did not return success.", variant: "danger" });
                 }
             } else {
                 // Release class (no parameters needed)
                 res = await releaseClass();
                 if (res && res.status === "success") {
                     setIsClassLocked(false);
+                    setLockFeedback({ show: true, message: "Class unlocked successfully.", variant: "success" });
                 } else {
-                    alert("Failed to unlock class. Server did not return success.");
+                    setLockFeedback({ show: true, message: "Failed to unlock class. Server did not return success.", variant: "danger" });
                 }
             }
             // Always fetch classrooms after lock/unlock
@@ -76,7 +80,7 @@ export default function AdminCalendar() {
                 console.error("Error fetching classrooms after lock/unlock:", err);
             }
         } catch (err) {
-            alert("Failed to " + (isClassLocked ? "unlock" : "lock") + " class. See console for details.");
+            setLockFeedback({ show: true, message: `Failed to ${isClassLocked ? "unlock" : "lock"} class. See console for details.`, variant: "danger" });
             console.error("Lock/Unlock error:", err);
         }
         setLockLoading(false);
@@ -86,6 +90,13 @@ export default function AdminCalendar() {
 
 
     const [showModal, setShowModal] = useState(false);
+    // Hide lock feedback after 2 seconds
+    useEffect(() => {
+        if (lockFeedback.show) {
+            const timer = setTimeout(() => setLockFeedback(f => ({ ...f, show: false })), 2000);
+            return () => clearTimeout(timer);
+        }
+    }, [lockFeedback.show]);
     const [events, setEvents] = useState([]);
     const [currentEvent, setCurrentEvent] = useState(null);
     const [lecturers, setLecturers] = useState([]);
@@ -105,6 +116,9 @@ export default function AdminCalendar() {
     const [persistentConflicts, setPersistentConflicts] = useState([]); //All conflicts (persistent)
     const [visibleNotifications, setVisibleNotifications] = useState([]); //Temporary notifications
     const [highlightedEvents, setHighlightedEvents] = useState([]);
+    const [showClashDetailsModal, setShowClashDetailsModal] = useState(false);
+    const [selectedClash, setSelectedClash] = useState(null);
+
 
     useEffect(() => {
         if (!isAuthenticated) return;
@@ -273,7 +287,7 @@ export default function AdminCalendar() {
                 const roomId = e.extendedProps?.classroom;
 
                 return {
-                    id: e.id, // Send unique event id to backend
+                    id: e.id,
                     course_id: courseId,
                     program_name: program,
                     year: parseInt(year),
@@ -545,23 +559,25 @@ const handleSuggestSlots = async () => {
     return;
   }
 
-  // 2. Find the actual event
-  const actualEvent = events.find(e => e.id === currentEvent.id);
-  if (!actualEvent) {
-    alert("Event not found. Please refresh and try again.");
-    return;
-  }
-
-  // 3. Check required assignments
-  const { lecturer_id, classroom, lecturer } = actualEvent.extendedProps || {};
-  if (!lecturer_id && !classroom) {
-    alert("Please assign both lecturer and classroom first");
-    return;
-  }
-
   setSuggestionsLoading(true);
 
   try {
+    // 2. Find the actual event from state if needed, but use props from currentEvent
+    const actualEvent = events.find(e => e.id === currentEvent.id);
+    if (!actualEvent) {
+      alert("Event not found. Please refresh and try again.");
+      setSuggestionsLoading(false);
+      return;
+    }
+
+    // 3. Check required assignments on the *actual* event object
+    const { lecturer_id, classroom } = actualEvent.extendedProps || {};
+    if (!lecturer_id && !classroom) {
+      alert("Please assign a lecturer and classroom to the event first.");
+      setSuggestionsLoading(false);
+      return;
+    }
+
     // 4. Prepare payload
     const payload = {
       ...(lecturer_id && { lecturer_id }),
@@ -571,32 +587,21 @@ const handleSuggestSlots = async () => {
     // 5. Fetch suggestions
     const { success, suggested_slots = [], message } = await suggestSlots(payload);
     
-    if (!success) {
-      alert(message || "Server error when fetching slots");
-      return;
-    }
+    if (success && suggested_slots?.length > 0) {
+      // 6. Clear previous suggestions before adding new ones
+      clearSuggestions();
+      
+      // 7. Convert and add new suggestions using the calendar's API
+      const calendarSlots = convertSuggestedSlots(suggested_slots);
+      calendarApi.addEventSource(calendarSlots);
+      setSuggestedSlots(suggested_slots); // Keep track of raw suggestions
 
-    if (!suggested_slots?.length) {
-      alert("No available time slots found");
-      return;
-    }
-
-    // 6. Clear previous suggestions
-    clearSuggestions();
-
-    // 7. Convert and add new suggestions
-    const calendarSlots = convertSuggestedSlots(suggested_slots);
-    setEvents(prev => [
-      ...prev.filter(e => !e.extendedProps?.isSuggestion),
-      ...calendarSlots
-    ]);
-
-    // 8. Update state
-    setSuggestedSlots(suggested_slots);
-
-    // 9. Optional: Zoom to first suggested slot
-    if (calendarSlots[0]?.start) {
-      calendarApi.scrollToTime(calendarSlots[0].start);
+      // 8. Optional: Zoom to first suggested slot
+      if (calendarSlots[0]?.start) {
+        calendarApi.scrollToTime(calendarSlots[0].start);
+      }
+    } else {
+      alert(message || "No available time slots found.");
     }
 
   } catch (error) {
@@ -607,37 +612,14 @@ const handleSuggestSlots = async () => {
   }
 };
 
-// Conversion utility (keep this at the top of your file)
-const convertSuggestedSlots = (suggestedSlots) => {
-  if (!Array.isArray(suggestedSlots)) return [];
-  
-  return suggestedSlots.map((slot, index) => ({
-    id: `suggestion-${index}-${slot.day_of_week}-${slot.start_time}`,
-    title: '',
-    start: `${slot.day_of_week}T${slot.start_time}`,
-    end: `${slot.day_of_week}T${slot.end_time}`,
-    display: 'background',
-    extendedProps: { 
-      isSuggestion: true,
-      originalData: slot // Preserve original data
-    },
-    classNames: ['fc-suggested-slot'],
-    borderColor: '#28a745',
-    backgroundColor: 'transparent'
-  }));
-};
-
 // Cleanup function
 const clearSuggestions = () => {
-  // Remove from DOM
+  // Remove suggestion background events from the calendar
   if (calendarApi) {
     calendarApi.getEvents()
       .filter(e => e.extendedProps?.isSuggestion)
       .forEach(e => e.remove());
   }
-  
-  // Remove from state
-  setEvents(prev => prev.filter(e => !e.extendedProps?.isSuggestion));
   setSuggestedSlots([]);
 };
 
@@ -874,6 +856,11 @@ const clearSuggestions = () => {
                     onEventRemove={handleEventRemove}
                     draggedEvents={draggedEvents}
                     isAdmin={true}
+                    conflicts={persistentConflicts}
+                    onClashClick={(clash) => {
+                        setSelectedClash(clash);
+                        setShowClashDetailsModal(true);
+                    }}
                     onClashDetected={(clash) => {
                         if (clash.type === "remove") {
                             // Remove clash entry for this event
@@ -901,6 +888,25 @@ const clearSuggestions = () => {
                     }}
                 />
             </div>
+
+
+            {/* Clash Details Modal */}
+            <Modal show={showClashDetailsModal} onHide={() => setShowClashDetailsModal(false)} centered>
+                <Modal.Header closeButton className="bg-danger text-white">
+                    <Modal.Title>
+                        <i className="bi bi-exclamation-triangle-fill me-2"></i>
+                        Conflict Details
+                    </Modal.Title>
+                </Modal.Header>
+                <Modal.Body>
+                    <h5>{selectedClash?.title}</h5>
+                    <p><strong>Time:</strong> {selectedClash?.timeSlot}</p>
+                    <p className="text-danger"><strong>Clash:</strong> {selectedClash?.message}</p>
+                </Modal.Body>
+                <Modal.Footer>
+                    <Button variant="secondary" onClick={() => setShowClashDetailsModal(false)}>Close</Button>
+                </Modal.Footer>
+            </Modal>
 
 
             {/* Styled Modal for assigning lecturer and classroom */}
@@ -964,4 +970,3 @@ const clearSuggestions = () => {
     );
 
 }
-
