@@ -15,10 +15,7 @@ function UserCalendar() {
   useEffect(() => {
     fetchUserTimetable()
       .then((data) => {
-        const formatted = data.entries
-          .map(entry => convertTimetableEntry(entry))
-          .filter(event => event !== null);
-
+        const formatted = data.entries.map(convertTimetableEntry).filter(Boolean);
         setEntries(formatted);
       })
       .catch((err) => console.log("Fetch error:", err));

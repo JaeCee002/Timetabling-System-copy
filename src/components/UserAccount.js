@@ -98,14 +98,16 @@ const UserAccount = ({ userRole = "admin" }) => {
             >
               🚪 Logout
             </div>
-            <div
-              onClick={() => navigate("/dash")}
-              onMouseOver={(e) => e.target.style.backgroundColor = '#6d9ccaff'}
-              onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
-              style={{ padding: '12px 16px', cursor: 'pointer', fontSize: '14px' }}
-            >
-              Dashboard
-            </div>
+            {currentUser.role === 'admin' && (
+              <div
+                onClick={() => navigate("/dash")}
+                onMouseOver={(e) => e.target.style.backgroundColor = '#6d9ccaff'}
+                onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
+                style={{ padding: '12px 16px', cursor: 'pointer', fontSize: '14px' }}
+              >
+                Dashboard
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -8,6 +8,7 @@ import 'bootstrap/dist/css/bootstrap.min.css';
 import { Modal, Button } from "react-bootstrap";
 import { useCalendarStore } from "./calendarStore";
 import "./myCalendar.css";
+import { useAuth } from "./AuthContext";
 import { fetchLecturers, fetchClassrooms, checkClash } from "../api/timetableAPI";
 function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit, onClashDetected, onClashClick,
   mode = "admin", draggedEvents, conflicts = [] }) {
@@ -21,8 +22,9 @@ function MyCalendar({ events, onEventAdd, onEventDelete, onEventEdit, onClashDet
   const [lecturers, setLecturers] = useState([]);
   const [classrooms, setClassrooms] = useState([]);
 
+  const { user } = useAuth(); // Moved useAuth to the top level
   const isAdmin = mode === "admin";
-  const isLecturer = mode === "user"; // Assuming 'user' mode is for lecturers/students
+  const isUserView = mode === "user"; // This now covers both student and lecturer
 
 //making calendarRef global
 const setCalendarApi = useCalendarStore(state => state.setCalendarApi);
@@ -99,7 +101,7 @@ const handleDelete = () => {
 const handleEditSave = () => {
   if (selectedEvent) {
     const baseTitle = selectedEvent.title.split('\n')[0];
-    const newTitle = getEventDisplayTitle(selectedEvent, {
+    const newTitle = getEventDisplayTitle(user, selectedEvent, {
       lecturer: editLecturer,
       classroom: editClassroom,
     });
@@ -111,14 +113,14 @@ const handleEditSave = () => {
 };
 
 // Helper to get event title based on mode
-const getEventDisplayTitle = (event, overrides = {}) => {
+const getEventDisplayTitle = (user, event, overrides = {}) => {
   if (!event || typeof event.title !== 'string') return '';
   // Always get the base title, which is the part before any parenthesis or newline
   const baseTitle = event.title.split(/[\n(]/)[0].trim();
 
   const lecturer = overrides.lecturer !== undefined ? overrides.lecturer : (event.extendedProps?.lecturer || '');
   const classroom = overrides.classroom !== undefined ? overrides.classroom : (event.extendedProps?.classroom || '');
-
+  
   const formatTime = (date) => {
     if (!date) return '';
     return new Date(date).toLocaleTimeString('en-US', {
@@ -128,9 +130,14 @@ const getEventDisplayTitle = (event, overrides = {}) => {
     });
   };
 
-  if (isLecturer) {
+  if (isUserView && user?.role === 'lecturer') {
     const timeString = `${formatTime(event.start)} - ${formatTime(event.end)}`;
-    return classroom ? `${baseTitle}\n(${classroom})\n${timeString}` : `${baseTitle}\n${timeString}`;
+    const details = classroom ? `(${classroom})` : '';
+    return `${timeString}\n${baseTitle}\n${details}`;
+  } else if (isUserView && user?.role === 'student') {
+    const timeString = `${formatTime(event.start)} - ${formatTime(event.end)}`;
+    const details = `(${lecturer}${lecturer && classroom ? ', ' : ''}${classroom})`;
+    return `${timeString}\n${baseTitle}\n${details}`;
   } else { // For admin and student views
     return `${baseTitle}\n(${lecturer}${lecturer && classroom ? ', ' : ''}${classroom})`;
   }
@@ -175,7 +182,7 @@ return (
               <strong>Title:</strong> {selectedEvent ? selectedEvent.title.split('\n')[0] : ''}
             </div>
             <div>
-              {!isLecturer && <strong>Lecturer:</strong>} {!isLecturer && (selectedEvent?.extendedProps?.lecturer || "Not set")}
+              {!isUserView && <strong>Lecturer:</strong>} {!isUserView && (selectedEvent?.extendedProps?.lecturer || "Not set")}
             </div>
             <div>
               <strong>Classroom:</strong> {selectedEvent?.extendedProps?.classroom || "Not set"}
@@ -258,7 +265,7 @@ return (
                   whiteSpace: 'nowrap'
                 }}
               >
-                {getEventDisplayTitle(e).split('\n')[0]}
+                {getEventDisplayTitle(user, e).split('\n')[0]}
               </div>
             ))}
           </div>
@@ -284,7 +291,7 @@ return (
             weekday: 'short'
           }}
           eventContent={(arg) => {
-            return { html: getEventDisplayTitle(arg.event).replace(/\n/g, '<br/>') };
+            return { html: getEventDisplayTitle(user, arg.event).replace(/\n/g, '<br/>') };
           }}
           eventClick={handleEventClick}
           eventDragStop={(info) => {
