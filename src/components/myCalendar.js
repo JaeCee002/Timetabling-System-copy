@@ -56,35 +56,38 @@ useEffect(() => {
 
 const showAlertAboveEvent = (info, message) => {
   const eventEl = info.el;
+  let x, y;
   if (eventEl) {
     const rect = eventEl.getBoundingClientRect();
-    setAlert({
-      show: true,
-      message,
-      x: rect.left + window.scrollX,
-      y: rect.top + window.scrollY - 40
-    });
+    x = rect.left + window.scrollX;
+    y = rect.top + window.scrollY - 60; // Move further above for visibility
+    // Ensure notification is not off-screen
+    if (y < 10) y = 10;
+    if (x < 10) x = 10;
   } else {
-    setAlert({
-      show: true,
-      message,
-      x: window.innerWidth / 2 - 100,
-      y: 100
-    });
+    // Center fallback
+    x = window.innerWidth / 2 - 150;
+    y = 60;
   }
+  setAlert({
+    show: true,
+    message,
+    x,
+    y
+  });
 };
 
 const handleEventClick = (info) => {
-  // Check if the clicked event is in the conflicts list
+  // Always check for conflict and show clash modal if present
   const conflict = conflicts.find(c => c.eventId === info.event.id);
   if (conflict && onClashClick) {
-    // If it's a conflict, show the clash details modal instead of the regular one
     onClashClick(conflict);
     return;
   }
-
+  // If not a conflict, show normal modal
   setSelectedEvent(info.event);
-  setEditLecturer(info.event.extendedProps?.lecturer || "");
+  // Store lecturer_id for editing
+  setEditLecturer(info.event.extendedProps?.lecturer_id || "");
   setEditClassroom(info.event.extendedProps?.classroom || "");
   setShowEventModal(true);
   setEditMode(false);
@@ -100,13 +103,17 @@ const handleDelete = () => {
 
 const handleEditSave = () => {
   if (selectedEvent) {
+    // Find lecturer name from ID
+    const lecturerObj = lecturers.find(l => l.user_id === editLecturer);
+    const lecturerName = lecturerObj ? lecturerObj.name : "";
     const baseTitle = selectedEvent.title.split('\n')[0];
     const newTitle = getEventDisplayTitle(user, selectedEvent, {
-      lecturer: editLecturer,
+      lecturer: lecturerName,
       classroom: editClassroom,
     });
     selectedEvent.setProp("title", newTitle);
-    selectedEvent.setExtendedProp("lecturer", editLecturer);
+    selectedEvent.setExtendedProp("lecturer", lecturerName);
+    selectedEvent.setExtendedProp("lecturer_id", editLecturer);
     selectedEvent.setExtendedProp("classroom", editClassroom);
     setShowEventModal(false);
   }
@@ -118,7 +125,12 @@ const getEventDisplayTitle = (user, event, overrides = {}) => {
   // Always get the base title, which is the part before any parenthesis or newline
   const baseTitle = event.title.split(/[\n(]/)[0].trim();
 
-  const lecturer = overrides.lecturer !== undefined ? overrides.lecturer : (event.extendedProps?.lecturer || '');
+  // Always resolve lecturer name from ID if possible
+  let lecturer = overrides.lecturer !== undefined ? overrides.lecturer : (event.extendedProps?.lecturer || '');
+  if (!lecturer && event.extendedProps?.lecturer_id && Array.isArray(lecturers)) {
+    const lecObj = lecturers.find(l => l.user_id === event.extendedProps.lecturer_id);
+    lecturer = lecObj ? lecObj.name : '';
+  }
   const classroom = overrides.classroom !== undefined ? overrides.classroom : (event.extendedProps?.classroom || '');
   
   const formatTime = (date) => {
@@ -146,26 +158,31 @@ const getEventDisplayTitle = (user, event, overrides = {}) => {
 return (
   <div className="container ms-10" style={{ marginLeft: 'auto', marginRight: 'auto', position: "relative" }}>
     {alert.show && (
-      <div className="delete-zone"
+      <div
+        className="calendar-alert"
         style={{
-          position: "absolute",
+          position: "fixed",
           left: alert.x,
           top: alert.y,
-          zIndex: 2000,
-          background: "#fff0f0",
+          zIndex: 9999,
+          background: "#fff",
           color: "#b91c1c",
-          border: "2px solid #b91c1c",
-          borderRadius: "8px",
-          padding: "10px 18px 10px 14px",
+          border: "3px solid #b91c1c",
+          borderRadius: "12px",
+          padding: "16px 24px 16px 20px",
           fontWeight: "bold",
-          boxShadow: "0 4px 16px rgba(173, 74, 74, 0.15)",
+          boxShadow: "0 8px 32px rgba(173, 74, 74, 0.25)",
+          minWidth: "260px",
+          maxWidth: "90vw",
+          textAlign: "center",
+          fontSize: "1.15rem",
           display: "flex",
           alignItems: "center",
-          minWidth: "220px",
+          gap: "12px"
         }}
       >
-        <span style={{ fontSize: "1.5rem", marginRight: "10px", color: "#b91c1c" }}>✖</span>
-        {alert.message}
+        <span style={{ fontSize: "2rem", color: "#b91c1c" }}>✖</span>
+        <span>{alert.message}</span>
       </div>
     )}
 
@@ -182,7 +199,15 @@ return (
               <strong>Title:</strong> {selectedEvent ? selectedEvent.title.split('\n')[0] : ''}
             </div>
             <div>
-              {!isUserView && <strong>Lecturer:</strong>} {!isUserView && (selectedEvent?.extendedProps?.lecturer || "Not set")}
+              {!isUserView && <strong>Lecturer:</strong>} {!isUserView && (() => {
+                // Show lecturer name from ID if available
+                const lecId = selectedEvent?.extendedProps?.lecturer_id;
+                if (lecId && Array.isArray(lecturers)) {
+                  const lecObj = lecturers.find(l => l.user_id === lecId);
+                  return lecObj ? lecObj.name : "Not set";
+                }
+                return selectedEvent?.extendedProps?.lecturer || "Not set";
+              })()}
             </div>
             <div>
               <strong>Classroom:</strong> {selectedEvent?.extendedProps?.classroom || "Not set"}
@@ -402,9 +427,8 @@ return (
               const res = await checkClash(payload);
 
               if (res.status === "failure") {
-                //window.alert(`${res.message}`);
-                //showAlertAboveEvent(info, `✖ Clash: ${res.message}`);
-
+                // Always show clash notification every time a conflict is detected
+                  window.alert(`Clash: ${res.message}`);
                 if (onClashDetected) {
                   onClashDetected({
                     title: info.event.title,
@@ -417,14 +441,19 @@ return (
                     timeSlot: `${info.event.start.toLocaleTimeString()} - ${info.event.end.toLocaleTimeString()}, ${info.event.start.toLocaleDateString("en-US", { weekday: "long" })}`
                   });
                 }
+              } else {
+                // No clash - notify parent to remove any existing clash entry for this event
+                if (onClashDetected) {
+                  onClashDetected({
+                    eventId: info.event.id,
+                    type: "remove" // Indicates we should remove any clash for this event
+                  });
+                }
+              }
 
-              } 
-              // No clash - notify parent to remove any existing clash entry for this event
-              if (onClashDetected) {
-                onClashDetected({
-                  eventId: info.event.id,
-                  type: "remove" // Indicates we should remove any clash for this event
-                });
+              // After drag-and-drop, refresh highlight for conflicts (for Show Conflicts button)
+              if (typeof window.refreshConflictHighlights === 'function') {
+                window.refreshConflictHighlights();
               }
 
             } catch (err) {

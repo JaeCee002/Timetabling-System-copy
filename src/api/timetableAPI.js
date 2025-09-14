@@ -168,7 +168,43 @@ export const addCourse = async(payload) => {
     const response = await axios.post('/add_course', payload);
     return response.data;
   } catch (error) {
-    console.error('Error addding course:', error);
+    console.error('Error adding course:', error);
     throw error;
   }
+}
+
+export const deleteClass = async(payload) => {
+    try {
+        const response = await axios.post('/delete_class', payload);
+        return response.data;
+    } catch (error) {
+        console.error('Error deleting class')
+    }
+}
+
+export const deleteCourse = async(payload) => {
+    try {
+        const response = await axios.post('/delete_course', payload);
+        return response.data;
+    } catch (error) {
+        console.error('Error deleting course')
+    }
+}
+
+export const editClass = async(payload) => {
+    try {
+        const response = await axios.post('/edit_class', payload);
+        return response.data;
+    } catch (error) {
+        console.error('Error editing class')
+    }
+}
+
+export const editCourse = async(payload) => {
+    try {
+        const response = await axios.post('/edit_course', payload);
+        return response.data;
+    } catch (error) {
+        console.error('Error editing course')
+    }
 }

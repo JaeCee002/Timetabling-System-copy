@@ -9,6 +9,10 @@ import {
   fetchAllPrograms,
   addCourse,
   addClass,
+  deleteClass,
+  deleteCourse,
+  editClass,
+  editCourse
 } from "../api/timetableAPI"; 
 import { Card } from "react-bootstrap";
 import { Modal, ModalBody, ModalHeader, ModalTitle } from "react-bootstrap";
@@ -107,25 +111,36 @@ const AdminDashboard = () => {
     setFormVisible((prev) => ({ ...prev, [tab]: !prev[tab] }));
     setEditIndex((prev) => ({ ...prev, [tab]: index }));
 
-    if (index !== null && data[tab][index]) {
+    if (tab === "courses") {
+      if (index !== null && data[tab][index]) {
+        const course = data[tab][index];
+        setFormData((prev) => ({
+          ...prev,
+          [tab]: {
+            ...course,
+            oldCode: course.code, // store previous code for edit
+            programYears: (course.programYears && course.programYears.length > 0)
+              ? course.programYears.map(py => ({
+                  program: py.program_name || py.program || "",
+                  year: String(py.year || "1")
+                }))
+              : [{ program: "", year: "1" }]
+          }
+        }));
+      } else {
+        // Add mode: always initialize with one empty pair
+        setFormData((prev) => ({
+          ...prev,
+          [tab]: {
+            programYears: [{ program: "", year: "1" }]
+          }
+        }));
+      }
+    } else if (index !== null && data[tab][index]) {
       setFormData((prev) => ({
         ...prev,
         [tab]: { ...data[tab][index] }
       }));
-    } else {
-      if (tab === "courses") {
-        setFormData((prev) => ({
-          ...prev,
-          [tab]: {
-            programYears: []
-          }
-        }));
-      } else {
-        setFormData((prev) => ({
-          ...prev,
-          [tab]: {}
-        }));
-      }
     }
   };
 
@@ -164,21 +179,41 @@ const AdminDashboard = () => {
   // Form submission
   const handleFormSubmit = async (tab) => {
     try {
-      if (tab === "courses") {
-        const payload = {
-          code: formData.courses?.code || "",
-          course: formData.courses?.name || "",
-          programs: Object.fromEntries(
-            (formData.courses?.programYears || []).map(pair => [
-              pair.program,
-              parseInt(pair.year, 10)
-            ])
-          )
-        };
+      const isEditing = editIndex[tab] !== undefined && editIndex[tab] !== null;
 
-        const response = await addCourse(payload);
+      if (tab === "courses") {
+        // Build payload for add/edit course
+        const course = formData.courses || {};
+        let response;
+        if (isEditing) {
+          // For editing, send old code under code, new code under newCode, and program/year pairs
+          const editPayload = {
+            code: course.oldCode || course.code,
+            newCode: course.code,
+            name: course.name || null,
+            programs: {}
+          };
+          (course.programYears || []).forEach(pair => {
+            if (pair.program) {
+              editPayload.programs[pair.program] = pair.year;
+            }
+          });
+          response = await editCourse(editPayload);
+        } else {
+          // For adding, keep original payload structure
+          const addPayload = {
+            code: course.code,
+            name: course.name,
+            programYears: (course.programYears || []).map(pair => ({
+              program: pair.program,
+              year: parseInt(pair.year)
+            }))
+          };
+          response = await addCourse(addPayload);
+        }
+
         if (response.status !== 'success') {
-          throw new Error(response.error || 'Failed to save course');
+          throw new Error(response.error || `Failed to ${isEditing ? 'update' : 'save'} course`);
         }
       } else {
         const payload = {
@@ -187,9 +222,21 @@ const AdminDashboard = () => {
           locked: formData[tab]?.locked === "Yes" ? 1 : 0
         };
         
-        const response = await addClass(payload);
-        if (response.status !== 'success') {
-          throw new Error(response.error || 'Failed to save classroom');
+        let response;
+        if (isEditing) {
+          // For editing classrooms, we only need id and capacity based on the PHP code
+          response = await editClass({
+            id: payload.id,
+            capacity: payload.capacity
+          });
+        } else {
+          response = await addClass(payload);
+        }
+
+        if(response.status === 'error'){
+          throw new Error(response.message);
+        } else if (response.status !== 'success') {
+          throw new Error(response.error || `Failed to ${isEditing ? 'update' : 'save'} classroom`);
         }
       }
 
@@ -199,6 +246,8 @@ const AdminDashboard = () => {
       setFormVisible((prev) => ({ ...prev, [tab]: false }));
       setEditIndex((prev) => ({ ...prev, [tab]: null }));
       setFormData((prev) => ({ ...prev, [tab]: {} }));
+      
+      alert(`${tab.slice(0, -1)} ${isEditing ? 'updated' : 'added'} successfully!`);
     } catch (error) {
       console.error('Error submitting form:', error);
       alert(`Error: ${error.message}`);
@@ -210,28 +259,23 @@ const AdminDashboard = () => {
     if (window.confirm("Are you sure you want to delete this entry?")) {
       try {
         const item = data[tab][idx];
-        const endpoint = tab === "courses" ? "deleteCourse" : "deleteClassroom";
-        const key = tab === "courses" ? "code" : "id";
-        
-        const response = await fetch(`/admin.php?action=${endpoint}`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            [key]: item[key]
-          })
-        });
+        let response;
 
-        const result = await response.json();
-        if (result.status === 'success') {
-          await refreshData();
+        if (tab === "courses") {
+          response = await deleteCourse({ course: item.code });
         } else {
-          alert('Error: ' + (result.error || 'Failed to delete'));
+          response = await deleteClass({ class: item.id });
+        }
+
+        if (response && response.status === 'success') {
+          await refreshData();
+          alert(`${tab.slice(0, -1)} deleted successfully!`);
+        } else {
+          throw new Error(response?.error || 'Failed to delete');
         }
       } catch (error) {
         console.error('Error deleting item:', error);
-        alert('Failed to delete item');
+        alert(`Failed to delete ${tab.slice(0, -1)}: ${error.message}`);
       }
     }
   };
@@ -254,16 +298,16 @@ const AdminDashboard = () => {
     return (
       <div className="program-years-section mb-4">
         {programYears.length > 0 && (
-          <label className="mb-2 font-medium block">Programs and Years</label>
+          <label className="mb-2 fw-bold">Programs and Years</label>
         )}
         {programYears.map((pair, idx) => (
-          <div key={idx} className="flex gap-2 mb-2 items-center">
-            <div className="flex-grow">
+          <div key={idx} className="d-flex align-items-center mb-2 gap-2">
+            <div className="flex-grow-1">
               <input
                 type="text"
                 list={`programOptions-${idx}`}
                 placeholder="Search Program..."
-                className="input border rounded px-2 py-1 w-full"
+                className="form-control"
                 value={pair.program}
                 onChange={(e) => updateProgramYearPair(idx, "program", e.target.value)}
                 required
@@ -276,34 +320,34 @@ const AdminDashboard = () => {
                   ))}
               </datalist>
             </div>
-            
             <select
-              className="input border rounded px-2 py-1"
+              className="form-select ms-2"
               value={pair.year}
               onChange={(e) => updateProgramYearPair(idx, "year", e.target.value)}
               required
+              style={{ maxWidth: 140 }}
             >
               <option value="1">First Year</option>
               <option value="2">Second Year</option>
               <option value="3">Third Year</option>
               <option value="4">Fourth Year</option>
             </select>
-            
             {programYears.length > 1 && (
               <button
                 type="button"
-                className="btn bg-red-500 text-white px-2 py-1 rounded"
+                className="btn btn-danger ms-2"
                 onClick={() => removeProgramYearPair(idx)}
+                style={{ fontWeight: "bold", fontSize: "1.2rem", lineHeight: "1" }}
+                aria-label="Remove Program/Year"
               >
-                ×
+                &times;
               </button>
             )}
           </div>
         ))}
-        
         <button
           type="button"
-          className="btn btn-primary rounded px-4 py-2 shadow-sm fw-semibold"
+          className="btn btn-primary rounded px-4 py-2 shadow-sm fw-semibold mt-2"
           onClick={addProgramYearPair}
         >
           {programYears.length > 0 ? "Add Another Program/Year" : "Add Program/Year"}
@@ -313,79 +357,94 @@ const AdminDashboard = () => {
   };
 
   // Render form based on tab
-  const renderForm = (tab) => (
-    <form
-      className="form-container flex flex-col gap-2 mb-4"
-      onSubmit={(e) => {
-        e.preventDefault();
-        handleFormSubmit(tab);
-      }}
-    >
-      {tabFields[tab].map((field, index) => {
-        if (field === "locked") {
-          return (
-            <div key={index} className="flex flex-col">
-              <label className="mb-1 font-medium">Locked</label>
-              <select
-                className="input border rounded px-2 py-1"
-                value={formData[tab]?.[field] || "No"}
-                onChange={(e) => handleInputChange(tab, field, e.target.value)}
-                required
-              >
-                <option value="Yes">Yes</option>
-                <option value="No">No</option>
-              </select>
-            </div>
-          );
-        } else if (field === "capacity") {
-          return (
-            <div key={index} className="flex flex-col">
-              <label className="mb-1 font-medium">Capacity</label>
-              <input
-                type="number"
-                min={1}
-                className="input border rounded px-2 py-1"
-                value={formData[tab]?.[field] || ""}
-                onChange={(e) => handleInputChange(tab, field, e.target.value)}
-                required
-              />
-            </div>
-          );
-        } else {
-          const label = field === "id" ? "Classroom ID" : 
-                      field === "code" ? "Course Code" : 
-                      field.charAt(0).toUpperCase() + field.slice(1);
-          return (
-            <div key={index} className="flex flex-col">
-              <label className="mb-1 font-medium">{label}</label>
-              <input
-                type="text"
-                placeholder={label}
-                className="input border rounded px-2 py-1"
-                value={formData[tab]?.[field] || ""}
-                onChange={(e) => handleInputChange(tab, field, e.target.value)}
-                required
-              />
-            </div>
-          );
-        }
-      })}
-      
-      {tab === "courses" && renderProgramYearInputs()}
-      
-      <button
-        type="submit"
-        className="btn submit bg-blue-600 text-white px-4 py-1 rounded mt-2"
+  const renderForm = (tab) => {
+    const isEditing = editIndex[tab] !== undefined && editIndex[tab] !== null;
+    
+    return (
+      <form
+        className="form-container flex flex-col gap-2 mb-4"
+        onSubmit={(e) => {
+          e.preventDefault();
+          handleFormSubmit(tab);
+        }}
       >
-        {editIndex[tab] !== undefined && editIndex[tab] !== null
-          ? "Update"
-          : "Submit"}
-      </button>
-    </form>
-  );
+        {tabFields[tab].map((field, index) => {
+          if (field === "locked") {
+            return (
+              <div key={index} className="flex flex-col">
+                <label className="mb-1 font-medium">Locked</label>
+                <select
+                  className="input border rounded px-2 py-1"
+                  value={formData[tab]?.[field] || "No"}
+                  onChange={(e) => handleInputChange(tab, field, e.target.value)}
+                  required
+                >
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
+            );
+          } else if (field === "capacity") {
+            return (
+              <div key={index} className="flex flex-col">
+                <label className="mb-1 font-medium">Capacity</label>
+                <input
+                  type="number"
+                  min={1}
+                  className="input border rounded px-2 py-1"
+                  value={formData[tab]?.[field] || ""}
+                  onChange={(e) => handleInputChange(tab, field, e.target.value)}
+                  required
+                />
+              </div>
+            );
+          } else {
+            const label = field === "id" ? "Classroom ID" : 
+                        field === "code" ? "Course Code" : 
+                        field.charAt(0).toUpperCase() + field.slice(1);
+            return (
+              <div key={index} className="flex flex-col">
+                <label className="mb-1 font-medium">{label}</label>
+                <input
+                  type="text"
+                  placeholder={label}
+                  className="input border rounded px-2 py-1"
+                  value={formData[tab]?.[field] || ""}
+                  onChange={(e) => handleInputChange(tab, field, e.target.value)}
+                  required
+                  readOnly={false} // Always editable
+                />
+              </div>
+            );
+          }
+        })}
+        
+        {tab === "courses" && renderProgramYearInputs()}
+        
+        <button
+          type="submit"
+          className="btn submit bg-blue-600 text-white px-4 py-1 rounded mt-2"
+        >
+          {isEditing ? "Update" : "Submit"}
+        </button>
+        
+        <button
+          type="button"
+          className="btn bg-gray-500 text-white px-4 py-1 rounded"
+          onClick={() => {
+            setFormVisible((prev) => ({ ...prev, [tab]: false }));
+            setEditIndex((prev) => ({ ...prev, [tab]: null }));
+            setFormData((prev) => ({ ...prev, [tab]: {} }));
+          }}
+        >
+          Cancel
+        </button>
+      </form>
+    );
+  };
 
   if (loading) {
-    return <div className="p-4 text-center">Loading data...</div>;
+    return <div>Loading...</div>;
   }
 
   return (
@@ -397,7 +456,7 @@ const AdminDashboard = () => {
       </div>
 
       <h1 className="text-3xl font-bold mb-6">Admin Dashboard - Data Management</h1>
-      
+
       <div className="tabs mb-6 flex gap-3">
         {tabs.map((tab) => (
           <button

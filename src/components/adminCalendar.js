@@ -27,6 +27,8 @@ export default function AdminCalendar() {
     // Lock state for class
     const [isClassLocked, setIsClassLocked] = useState(false);
     const [lockLoading, setLockLoading] = useState(false);
+    // Feedback notification for lock/unlock
+    const [lockFeedback, setLockFeedback] = useState({ show: false, message: '', variant: 'info' });
 
     // Check lock status on mount/login/refresh
     useEffect(() => {
@@ -56,16 +58,18 @@ export default function AdminCalendar() {
                 res = await lockClass();
                 if (res && res.status === "success") {
                     setIsClassLocked(true);
+                    setLockFeedback({ show: true, message: "Class locked successfully.", variant: "success" });
                 } else {
-                    alert("Failed to lock class. Server did not return success.");
+                    setLockFeedback({ show: true, message: "Failed to lock class. Server did not return success.", variant: "danger" });
                 }
             } else {
                 // Release class (no parameters needed)
                 res = await releaseClass();
                 if (res && res.status === "success") {
                     setIsClassLocked(false);
+                    setLockFeedback({ show: true, message: "Class unlocked successfully.", variant: "success" });
                 } else {
-                    alert("Failed to unlock class. Server did not return success.");
+                    setLockFeedback({ show: true, message: "Failed to unlock class. Server did not return success.", variant: "danger" });
                 }
             }
             // Always fetch classrooms after lock/unlock
@@ -76,7 +80,7 @@ export default function AdminCalendar() {
                 console.error("Error fetching classrooms after lock/unlock:", err);
             }
         } catch (err) {
-            alert("Failed to " + (isClassLocked ? "unlock" : "lock") + " class. See console for details.");
+            setLockFeedback({ show: true, message: `Failed to ${isClassLocked ? "unlock" : "lock"} class. See console for details.`, variant: "danger" });
             console.error("Lock/Unlock error:", err);
         }
         setLockLoading(false);
@@ -86,6 +90,13 @@ export default function AdminCalendar() {
 
 
     const [showModal, setShowModal] = useState(false);
+    // Hide lock feedback after 2 seconds
+    useEffect(() => {
+        if (lockFeedback.show) {
+            const timer = setTimeout(() => setLockFeedback(f => ({ ...f, show: false })), 2000);
+            return () => clearTimeout(timer);
+        }
+    }, [lockFeedback.show]);
     const [events, setEvents] = useState([]);
     const [currentEvent, setCurrentEvent] = useState(null);
     const [lecturers, setLecturers] = useState([]);
@@ -276,7 +287,7 @@ export default function AdminCalendar() {
                 const roomId = e.extendedProps?.classroom;
 
                 return {
-                    id: e.id, // Send unique event id to backend
+                    id: e.id,
                     course_id: courseId,
                     program_name: program,
                     year: parseInt(year),
