@@ -171,7 +171,7 @@ export default function AdminCalendar() {
         setShowModal(true);
     };
 
-    // Handle updating an existing event (when moved/resized)
+    // Handle updating an existing event (when moved)
     const handleEventUpdate = async (updatedEvent) => {
         if (!selectedLecturer || !selectedClassroom || !currentEvent) return;
 
@@ -553,7 +553,6 @@ const [suggestedSlots, setSuggestedSlots] = useState([]);
 const [suggestionsLoading, setSuggestionsLoading] = useState(false);
 
 const handleSuggestSlots = async () => {
-  // 1. Validate prerequisites
   if (!currentEvent || !calendarApi) {
     console.warn(currentEvent ? "Calendar API not ready" : "No event selected");
     return;
@@ -562,41 +561,35 @@ const handleSuggestSlots = async () => {
   setSuggestionsLoading(true);
 
   try {
-    // 2. Find the actual event from state if needed, but use props from currentEvent
     const actualEvent = events.find(e => e.id === currentEvent.id);
     if (!actualEvent) {
       alert("Event not found. Please refresh and try again.");
       setSuggestionsLoading(false);
       return;
     }
-
-    // 3. Check required assignments on the *actual* event object
     const { lecturer_id, classroom } = actualEvent.extendedProps || {};
     if (!lecturer_id && !classroom) {
       alert("Please assign a lecturer and classroom to the event first.");
       setSuggestionsLoading(false);
       return;
     }
-
-    // 4. Prepare payload
     const payload = {
       ...(lecturer_id && { lecturer_id }),
       ...(classroom && { class: classroom })
     };
 
-    // 5. Fetch suggestions
+    //Fetch suggestions
     const { success, suggested_slots = [], message } = await suggestSlots(payload);
     
     if (success && suggested_slots?.length > 0) {
-      // 6. Clear previous suggestions before adding new ones
+      //Clear previous suggestions before adding new ones
       clearSuggestions();
       
-      // 7. Convert and add new suggestions using the calendar's API
+      //Convert and add new suggestions using the calendar's API
       const calendarSlots = convertSuggestedSlots(suggested_slots);
       calendarApi.addEventSource(calendarSlots);
       setSuggestedSlots(suggested_slots); // Keep track of raw suggestions
 
-      // 8. Optional: Zoom to first suggested slot
       if (calendarSlots[0]?.start) {
         calendarApi.scrollToTime(calendarSlots[0].start);
       }
@@ -646,31 +639,6 @@ const clearSuggestions = () => {
                         : (isClassLocked ? "Unlock Class" : "Lock Class")}
 
                 </i>
-
-                {/* <Button
-                
-                    variant={isClassLocked ? "danger" : "primary"}
-                    onClick={handleLockToggle}
-                >
-                    {lockLoading
-                        ? (isClassLocked ? "Unlocking..." : "Locking...")
-                        : (isClassLocked ? "Unlock Class" : "Lock Class")}
-                </Button>
-                // Clear Timetable Button 
-//                 <Button
-//                     variant="outline-secondary"
-//                     onClick={() => {
-//                         setEvents([]);
-//                         setDraggedEvents([]);
-//                         setCurrentEvent(null);
-//                     }}
-//                     disabled={events.length === 0}
-//                 >
-//                     Clear Timetable
-//                 </Button>
-
-//                 </Button> */}
-
             </div>
             <ToastContainer position="top-end" className="p-3" style={{ zIndex: 9999 }} >
                 {visibleNotifications.map((clash, index) => (
@@ -700,16 +668,6 @@ const clearSuggestions = () => {
                 top: '10px',
                 right: '20px',
                 zIndex: 1000,
-                
-                //     width: '40px', // Fixed width
-                //     height: '40px', // Fixed height to match width
-                //     borderRadius: '0%', // This makes it circular
-                //     overflow: 'hidden', // Ensures content stays within circle
-                //     display: 'flex',
-                //     alignItems: 'center',
-                //     justifyContent: 'center',
-                //     backgroundColor: '#f8f9fa', // Optional background color
-                //     boxShadow: '0 2px 5px rgba(0,0,0,0.2)'
             }}>
                 <UserAccount userRole="admin" />
             </div>
@@ -795,13 +753,13 @@ const clearSuggestions = () => {
                 style={{
                     position: "absolute",
                     bottom: "45px",
-                    right: "60px",
+                    right: "85px",
                     zIndex: 1000,
                     display: "flex",
                     gap: "10px"
                 }}>
                 <i
-                    className="bi bi-arrow-left-circle"
+                    className="bi bi-arrow-counterclockwise"
                     style={{
                         fontSize: "2rem",  // Larger icon (adjust as needed: 1.5rem, 2rem, 2.5rem, etc.)
                         color: "#12273aff",  // Bootstrap's "danger" red (optional)
@@ -817,13 +775,13 @@ const clearSuggestions = () => {
                 style={{
                     position: "absolute",
                     bottom: "45px",
-                    right: "20px",
+                    right: "45px",
                     zIndex: 1000,
                     display: "flex",
                     gap: "10px"
                 }}>
                 <i
-                    className="bi bi-arrow-right-circle"
+                    className="bi bi-arrow-clockwise"
                     style={{
                         fontSize: "2rem",
                         color: "#12273aff",
@@ -837,7 +795,7 @@ const clearSuggestions = () => {
             </div>
 
 
-            {/* Wrap MyCalendar in a div with left margin for admin view */}
+            
             <div
   style={{
     flexGrow: 1,
@@ -845,7 +803,7 @@ const clearSuggestions = () => {
     marginTop: '50px',
     height: '100vh',
     overflow: 'hidden',
-    paddingRight: '20px' // Optional padding for right spacing
+    paddingRight: '20px' 
   }}
 >
                 <MyCalendar
