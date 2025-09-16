@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Link } from "react-router-dom";
 import 'bootstrap/dist/css/bootstrap.min.css';
 import "./dash.css";
@@ -37,6 +37,7 @@ const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
   const [showProgramsModal, setShowProgramsModal] = useState(false);
   const [selectedCourseForModal, setSelectedCourseForModal] = useState(null);
+  const formRef = useRef(null);
 
   // Fetch data from backend
   useEffect(() => {
@@ -108,41 +109,49 @@ const AdminDashboard = () => {
 
   // Form management functions
   const toggleForm = (tab, index = null) => {
-    setFormVisible((prev) => ({ ...prev, [tab]: !prev[tab] }));
-    setEditIndex((prev) => ({ ...prev, [tab]: index }));
+  setFormVisible((prev) => ({ ...prev, [tab]: !prev[tab] }));
+  setEditIndex((prev) => ({ ...prev, [tab]: index }));
 
-    if (tab === "courses") {
-      if (index !== null && data[tab][index]) {
-        const course = data[tab][index];
-        setFormData((prev) => ({
-          ...prev,
-          [tab]: {
-            ...course,
-            oldCode: course.code, // store previous code for edit
-            programYears: (course.programYears && course.programYears.length > 0)
-              ? course.programYears.map(py => ({
-                  program: py.program_name || py.program || "",
-                  year: String(py.year || "1")
-                }))
-              : [{ program: "", year: "1" }]
-          }
-        }));
-      } else {
-        // Add mode: always initialize with one empty pair
-        setFormData((prev) => ({
-          ...prev,
-          [tab]: {
-            programYears: [{ program: "", year: "1" }]
-          }
-        }));
-      }
-    } else if (index !== null && data[tab][index]) {
+  if (tab === "courses") {
+    if (index !== null && data[tab][index]) {
+      const course = data[tab][index];
       setFormData((prev) => ({
         ...prev,
-        [tab]: { ...data[tab][index] }
+        [tab]: {
+          ...course,
+          oldCode: course.code,
+          programYears: (course.programYears && course.programYears.length > 0)
+            ? course.programYears.map(py => ({
+                program: py.program_name || py.program || "",
+                year: String(py.year || "1")
+              }))
+            : [{ program: "", year: "1" }]
+        }
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [tab]: { programYears: [{ program: "", year: "1" }] }
       }));
     }
-  };
+  } else if (index !== null && data[tab][index]) {
+    setFormData((prev) => ({
+      ...prev,
+      [tab]: { ...data[tab][index] }
+    }));
+  }
+
+  // Scroll to top of the page when editing
+  if (index !== null) {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  //scroll the form into view if needed
+  if (index !== null && formRef.current) {
+    formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+};
+
 
   const handleInputChange = (tab, field, value) => {
     setFormData((prev) => ({
@@ -484,7 +493,11 @@ const AdminDashboard = () => {
             Add New {tab.slice(0, -1)}
           </button>
 
-          {formVisible[tab] && renderForm(tab)}
+          {formVisible[tab] && (
+            <div ref={formRef}>
+              {renderForm(tab)}
+            </div>
+          )}
 
           <div className="overflow-x-auto border border-gray-300 rounded shadow">
             <table className="min-w-full table-auto">

@@ -119,13 +119,13 @@ const handleEditSave = () => {
   }
 };
 
-// Helper to get event title based on mode
+ //Helper to get event title based on mode
 const getEventDisplayTitle = (user, event, overrides = {}) => {
   if (!event || typeof event.title !== 'string') return '';
-  // Always get the base title, which is the part before any parenthesis or newline
+  //Always get the base title, which is the part before any parenthesis or newline
   const baseTitle = event.title.split(/[\n(]/)[0].trim();
 
-  // Always resolve lecturer name from ID if possible
+  //Always resolve lecturer name from ID if possible
   let lecturer = overrides.lecturer !== undefined ? overrides.lecturer : (event.extendedProps?.lecturer || '');
   if (!lecturer && event.extendedProps?.lecturer_id && Array.isArray(lecturers)) {
     const lecObj = lecturers.find(l => l.user_id === event.extendedProps.lecturer_id);

@@ -111,52 +111,6 @@ const UserAccount = ({ userRole = "admin" }) => {
           </div>
         )}
       </div>
-
-      
-      {/* {showDropdown && (
-        <div style={{
-          position: 'absolute',
-          top: '100%',
-          left: 0,
-          right: 0,
-          backgroundColor: '#fff',
-          border: '1px solid #ddd',
-          borderRadius: '8px',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
-          zIndex: 1000,
-          marginTop: '4px',
-        }}>
-          <div style={{ padding: '12px 16px', fontSize: '14px', border }}>
-            <strong>{currentUser.email}</strong>
-          </div>
-          <div style={{ height: '1px', backgroundColor: '#eee' }}></div>
-          <div
-            onClick={handleSwitchAccount}
-            onMouseOver={(e) => e.target.style.backgroundColor = '#f8f9fa'}
-            onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
-            style={{
-              padding: '12px 16px',
-              cursor: 'pointer',
-              fontSize: '14px',
-            }}
-          >
-            🔄 Switch Account
-          </div>
-          <div
-            onClick={handleLogout}
-            onMouseOver={(e) => e.target.style.backgroundColor = '#f8f9fa'}
-            onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
-            style={{
-              padding: '12px 16px',
-              cursor: 'pointer',
-              fontSize: '14px',
-            }}
-          >
-            🚪 Logout
-          </div>
-        </div> 
-     //)}
-*/}
     </div>
   );
 };
