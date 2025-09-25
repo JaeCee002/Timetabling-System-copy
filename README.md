@@ -1,3 +1,14 @@
+3RD YEAR GROUP PROJECT
+
+Programmers:
+Nanetu 
+Lewis
+Steven
+Joseph 
+
+This was our 3rd year school project for the course CS301(Project Management) at the copperbelt university.
+
+
 # Getting Started with Create React App
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
